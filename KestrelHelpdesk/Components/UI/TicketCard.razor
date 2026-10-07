@@ -1,0 +1,13 @@
+@using KestrelHelpdesk.Models
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="card-title">@Ticket.Title</h5>
+    <h6 class="card-subtitle mb-2 text-muted">Ticket ID: @Ticket.Id</h6>
+    <p class="card-text">@Ticket.Description</p>
+    <div>
+      Status: <StatusBadge Status="Ticket.Status" /> |
+      Priority: <PriorityBadge Priority="Ticket.Priority" />
+    </div>
+  </div>
+</div>

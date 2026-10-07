@@ -1,0 +1,13 @@
+﻿@using KestrelHelpdesk.Models
+
+<div class="ticket-list">
+  @foreach (var ticket in Tickets)
+  {
+    <TicketCard @key="ticket.Id" Ticket="ticket" />
+  }
+</div>
+
+@code {
+  [Parameter, EditorRequired]
+  public List<Ticket> Tickets { get; set; } = new();
+}

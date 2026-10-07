@@ -1,5 +1,40 @@
-﻿<h3>Tickets</h3>
+﻿@page "/tickets"
+@rendermode InteractiveServer
+@using KestrelHelpdesk.Models
+@using KestrelHelpdesk.Components.UI
+
+<h3>Ticket Board</h3>
+
+<div class="mb-4 p-3 border rounded bg-light">
+  <label class="form-label fw-bold">Filter by Status:</label>
+  <select class="form-select w-25" @bind="selectedStatus">
+    <option value="">All Tickets</option>
+    @foreach (var status in Enum.GetValues<TicketStatus>())
+    {
+      <option value="@status">@status</option>
+    }
+  </select>
+
+  <div class="mt-2 text-muted">
+    <strong>Showing @filteredTickets.Count of @allTickets.Count tickets</strong>
+  </div>
+</div>
+
+<TicketList Tickets="filteredTickets" />
 
 @code {
+  private TicketStatus? selectedStatus;
 
+  private List<Ticket> allTickets = Enumerable.Range(1, 20).Select(i => new Ticket
+  {
+    Id = i,
+    Title = $"Support Issue #{i}",
+    Description = "Example description text for testing UI rendering.",
+    Status = (TicketStatus)(i % 3),
+    Priority = (TicketPriority)(i % 4)
+  }).ToList();
+
+  private List<Ticket> filteredTickets => selectedStatus.HasValue
+      ? allTickets.Where(t => t.Status == selectedStatus.Value).ToList()
+      : allTickets;
 }
