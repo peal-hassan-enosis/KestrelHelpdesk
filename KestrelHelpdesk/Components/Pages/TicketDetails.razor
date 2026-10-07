@@ -1,0 +1,50 @@
+﻿@page "/tickets/{id:int}"
+@using KestrelHelpdesk.Models
+
+<PageTitle>Ticket #@Id</PageTitle>
+
+@if (currentTicket != null)
+{
+  <div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between">
+      <h4 class="mb-0">Ticket #@currentTicket.Id</h4>
+      <span class="badge bg-light text-dark">@currentTicket.Status</span>
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">@currentTicket.Title</h5>
+      <p class="card-text">@currentTicket.Description</p>
+      <hr />
+      <p><strong>Priority:</strong> @currentTicket.Priority</p>
+    </div>
+  </div>
+}
+else
+{
+  <div class="alert alert-danger mt-4">
+    Ticket #@Id could not be found or does not exist.
+  </div>
+}
+
+@code {
+  [Parameter]
+  public int Id { get; set; }
+
+  private Ticket? currentTicket;
+
+  protected override void OnInitialized()
+  {
+    // Mocking a database lookup for now.
+    // If the ID is 999, we simulate a missing ticket to trigger the error UI.
+    if (Id != 999)
+    {
+      currentTicket = new Ticket
+      {
+        Id = Id,
+        Title = $"Support Issue #{Id}",
+        Description = "This is a mocked description for the details page.",
+        Status = TicketStatus.Open,
+        Priority = TicketPriority.High
+      };
+    }
+  }
+}

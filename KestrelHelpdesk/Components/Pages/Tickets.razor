@@ -2,12 +2,13 @@
 @rendermode InteractiveServer
 @using KestrelHelpdesk.Models
 @using KestrelHelpdesk.Components.UI
+@inject NavigationManager NavManager
 
 <h3>Ticket Board</h3>
 
 <div class="mb-4 p-3 border rounded bg-light">
   <label class="form-label fw-bold">Filter by Status:</label>
-  <select class="form-select w-25" @bind="selectedStatus">
+  <select class="form-select w-25" @bind="selectedStatus" @bind:after="OnStatusDropdownChanged">
     <option value="">All Tickets</option>
     @foreach (var status in Enum.GetValues<TicketStatus>())
     {
@@ -23,7 +24,34 @@
 <TicketList Tickets="filteredTickets" />
 
 @code {
-  private TicketStatus? selectedStatus;
+  [Parameter]
+  [SupplyParameterFromQuery(Name = "status")]
+  public string? StatusQueryString { get; set; }
+
+  public TicketStatus? selectedStatus {get; set; }
+
+  protected override void OnParametersSet()
+  {
+    // ignoreCase: true allows "?status=open" or "?status=Open" to work perfectly
+    if (Enum.TryParse<TicketStatus>(StatusQueryString, ignoreCase: true, out var parsedStatus))
+    {
+      selectedStatus = parsedStatus;
+    }
+    else
+    {
+      // If the URL has junk text or is completely empty, default to "All Tickets"
+      selectedStatus = null;
+    }
+  }
+
+  private void OnStatusDropdownChanged()
+  {
+    var selectedValue = selectedStatus?.ToString();
+
+    // Updates the browser URL to ?status=X without a full page reload
+    var newUrl = NavManager.GetUriWithQueryParameter("status", selectedValue);
+    NavManager.NavigateTo(newUrl);
+  }
 
   private List<Ticket> allTickets = Enumerable.Range(1, 20).Select(i => new Ticket
   {
