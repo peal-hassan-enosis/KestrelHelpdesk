@@ -1,0 +1,46 @@
+﻿@page "/tickets/{id:int}/edit"
+@using KestrelHelpdesk.Models
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+
+<PageTitle>Edit Ticket #@Id - Kestrel Helpdesk</PageTitle>
+
+<div class="container mt-4" style="max-width: 800px;">
+    @if (ticketToEdit == null)
+    {
+        <p>Loading ticket...</p>
+    }
+    else
+    {
+        <h2>Edit Ticket #@ticketToEdit.Id</h2>
+        <hr />
+
+        <TicketForm TicketModel="ticketToEdit" SubmitButtonText="Update Ticket" OnValidSubmit="UpdateTicket" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Ticket? ticketToEdit;
+
+    protected override void OnInitialized()
+    {
+        // Placeholder data; will connect to service/DB in Topic 5/6
+        ticketToEdit = new Ticket
+        {
+            Id = Id,
+            Title = "Printer not working on 3rd Floor",
+            Category = TicketCategory.Hardware,
+            Priority = TicketPriority.Medium,
+            Description = "Paper jam error won't clear."
+        };
+    }
+
+    private void UpdateTicket(Ticket ticket)
+    {
+        // TODO: Save changes via ITicketService
+        Nav.NavigateTo($"/tickets/{ticket.Id}");
+    }
+}

@@ -1,50 +1,113 @@
 ﻿@page "/tickets/{id:int}"
 @using KestrelHelpdesk.Models
+@rendermode InteractiveServer
 
-<PageTitle>Ticket #@Id</PageTitle>
+<PageTitle>Ticket #@Id Details</PageTitle>
 
-@if (currentTicket != null)
-{
-  <div class="card shadow-sm mt-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between">
-      <h4 class="mb-0">Ticket #@currentTicket.Id</h4>
-      <span class="badge bg-light text-dark">@currentTicket.Status</span>
+<div class="container mt-4">
+  @if (ticket == null)
+  {
+    <div class="alert alert-warning">Ticket not found.</div>
+  }
+  else
+  {
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>#@ticket.Id - @ticket.Title</h2>
+      <div>
+        <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary me-2">Edit Ticket</a>
+        <a href="/tickets" class="btn btn-secondary">Back to List</a>
+      </div>
     </div>
-    <div class="card-body">
-      <h5 class="card-title">@currentTicket.Title</h5>
-      <p class="card-text">@currentTicket.Description</p>
-      <hr />
-      <p><strong>Priority:</strong> @currentTicket.Priority</p>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="mb-2">
+          <span class="badge bg-info text-dark">Category: @ticket.Category</span>
+          <span class="badge bg-warning text-dark me-2">Priority: @ticket.Priority</span>
+          <span class="badge bg-success">Status: @ticket.Status</span>
+        </div>
+        <p class="card-text mt-3">@ticket.Description</p>
+      </div>
     </div>
-  </div>
-}
-else
-{
-  <div class="alert alert-danger mt-4">
-    Ticket #@Id could not be found or does not exist.
-  </div>
-}
+
+    <h4>Discussion Thread (@ticket.Comments.Count)</h4>
+    <hr />
+
+    <!-- Render Comments List -->
+    @if (ticket.Comments.Any())
+    {
+      <div class="list-group mb-4">
+        @foreach (var comment in ticket.Comments)
+        {
+          <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1 fw-bold">@comment.Author</h6>
+              <small class="text-muted">@comment.CreatedAt.ToLocalTime().ToString("g")</small>
+            </div>
+            <p class="mb-1">@comment.Text</p>
+          </div>
+        }
+      </div>
+    }
+    else
+    {
+      <p class="text-muted mb-4">No comments added yet. Be the first to respond!</p>
+    }
+
+    <!-- Add Comment Form -->
+    <div class="card bg-light">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Add a Comment</h5>
+        <EditForm Model="newComment" OnValidSubmit="AddComment">
+          <DataAnnotationsValidator />
+
+          <div class="mb-3">
+            <InputTextArea @bind-Value="newComment.Text" class="form-control" rows="3" placeholder="Write a response..." />
+            <ValidationMessage For="@(() => newComment.Text)" class="text-danger small" />
+          </div>
+
+          <button type="submit" class="btn btn-primary">Post Comment</button>
+        </EditForm>
+      </div>
+    </div>
+  }
+</div>
 
 @code {
   [Parameter]
   public int Id { get; set; }
 
-  private Ticket? currentTicket;
+  private Ticket? ticket;
+  private Comment newComment = new();
 
   protected override void OnInitialized()
   {
-    // Mocking a database lookup for now.
-    // If the ID is 999, we simulate a missing ticket to trigger the error UI.
-    if (Id != 999)
+    // Seed initial ticket details and comments
+    ticket = new Ticket
     {
-      currentTicket = new Ticket
-      {
-        Id = Id,
-        Title = $"Support Issue #{Id}",
-        Description = "This is a mocked description for the details page.",
-        Status = TicketStatus.Open,
-        Priority = TicketPriority.High
-      };
-    }
+      Id = Id,
+      Title = "VPN Disconnecting frequently",
+      Category = TicketCategory.Network,
+      Priority = TicketPriority.High,
+      Description = "Every 10 minutes the VPN connection drops out while working remotely.",
+      Comments = new List<Comment>
+            {
+                new Comment { Id = 1, TicketId = Id, Author = "IT Support Agent", Text = "We are investigating router logs.", CreatedAt = DateTime.UtcNow.AddHours(-2) }
+            }
+    };
+  }
+
+  private void AddComment()
+  {
+    if (ticket == null) return;
+
+    newComment.Id = ticket.Comments.Count + 1;
+    newComment.TicketId = ticket.Id;
+    newComment.CreatedAt = DateTime.UtcNow;
+
+    ticket.Comments.Add(newComment);
+
+    // Reset the form model for the next comment
+    newComment = new Comment();
   }
 }
