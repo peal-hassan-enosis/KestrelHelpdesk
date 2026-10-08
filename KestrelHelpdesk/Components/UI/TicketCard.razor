@@ -1,13 +1,18 @@
 @using KestrelHelpdesk.Models
 
-<div class="card mb-3">
+<div class="card h-100 shadow-sm">
   <div class="card-body">
-    <h5 class="card-title">@Ticket.Title</h5>
-    <h6 class="card-subtitle mb-2 text-muted">Ticket ID: @Ticket.Id</h6>
-    <p class="card-text">@Ticket.Description</p>
-    <div>
-      Status: <StatusBadge Status="Ticket.Status" /> |
-      Priority: <PriorityBadge Priority="Ticket.Priority" />
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="badge bg-secondary">#@Ticket.Id</span>
+      <StatusBadge Status="Ticket.Status" />
     </div>
+    <h5 class="card-title">
+      <a href="/tickets/@Ticket.Id" class="text-decoration-none">@Ticket.Title</a>
+    </h5>
+    <p class="card-text text-muted small">@Ticket.Description</p>
+  </div>
+  <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center">
+    <PriorityBadge Priority="Ticket.Priority" />
+    <a href="/tickets/@Ticket.Id" class="btn btn-sm btn-outline-primary">View Details</a>
   </div>
 </div>

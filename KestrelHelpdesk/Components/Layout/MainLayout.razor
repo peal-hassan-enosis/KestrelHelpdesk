@@ -1,23 +1,84 @@
 ﻿@inherits LayoutComponentBase
+@using KestrelHelpdesk.State
+@using KestrelHelpdesk.Models
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject CurrentUserState UserState
+@inject ProtectedSessionStorage SessionStorage
+@implements IDisposable
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
+  <div class="sidebar">
+    <NavMenu />
+  </div>
+
+  <main>
+    <div class="top-row px-4 d-flex justify-content-between align-items-center">
+      <span class="fw-bold">Kestrel Helpdesk</span>
+
+      <!-- Fake User Header Selector -->
+      <div class="d-flex align-items-center gap-2">
+        <label class="small text-muted mb-0">Active User:</label>
+        <select class="form-select form-select-sm w-auto" value="@UserState.CurrentUser?.Id" @onchange="OnUserSelected">
+          @foreach (var user in UserState.AvailableUsers)
+          {
+            <option value="@user.Id">
+              @user.Name (@user.Role)
+            </option>
+          }
+        </select>
+      </div>
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    <article class="content px-4">
+      @Body
+    </article>
+  </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+@code {
+  protected override void OnInitialized()
+  {
+    UserState.OnChange += HandleStateChanged;
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      // Restore selected user from browser session storage after interactive circuit boots
+      var result = await SessionStorage.GetAsync<int>("active_user_id");
+      if (result.Success && result.Value > 0)
+      {
+        var savedUser = UserState.AvailableUsers.FirstOrDefault(u => u.Id == result.Value);
+        if (savedUser != null && savedUser.Id != UserState.CurrentUser?.Id)
+        {
+          UserState.SetUser(savedUser);
+        }
+      }
+    }
+  }
+
+  private async Task OnUserSelected(ChangeEventArgs e)
+  {
+    if (int.TryParse(e.Value?.ToString(), out int userId))
+    {
+      var selectedUser = UserState.AvailableUsers.FirstOrDefault(u => u.Id == userId);
+      if (selectedUser != null)
+      {
+        UserState.SetUser(selectedUser);
+        // Persist to session storage so browser refresh doesn't lose it
+        await SessionStorage.SetAsync("active_user_id", selectedUser.Id);
+      }
+    }
+  }
+
+  private void HandleStateChanged()
+  {
+    InvokeAsync(StateHasChanged);
+  }
+
+  public void Dispose()
+  {
+    UserState.OnChange -= HandleStateChanged;
+  }
+}

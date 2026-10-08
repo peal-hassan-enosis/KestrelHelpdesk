@@ -1,10 +1,16 @@
 using KestrelHelpdesk.Components;
+using KestrelHelpdesk.Services;
+using KestrelHelpdesk.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register Scoped Services (per Circuit / Tab session)
+builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<CurrentUserState>();
 
 var app = builder.Build();
 

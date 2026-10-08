@@ -1,77 +1,94 @@
 ﻿@page "/tickets/{id:int}"
 @using KestrelHelpdesk.Models
+@using KestrelHelpdesk.Services
+@using KestrelHelpdesk.State
+@inject ITicketService TicketService
+@inject CurrentUserState UserState
+@implements IDisposable
+
 @rendermode InteractiveServer
 
-<PageTitle>Ticket #@Id Details</PageTitle>
+<PageTitle>Ticket Details #@Id - Kestrel Helpdesk</PageTitle>
 
-<div class="container mt-4">
-  @if (ticket == null)
+@if (ticket == null)
+{
+  @if (notFound)
   {
-    <div class="alert alert-warning">Ticket not found.</div>
+    <div class="alert alert-danger shadow-sm">
+      <h4>Ticket Not Found</h4>
+      <p>The ticket with ID <strong>#@Id</strong> could not be found.</p>
+      <a href="/tickets" class="btn btn-outline-secondary">Back to Ticket Board</a>
+    </div>
   }
   else
   {
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>#@ticket.Id - @ticket.Title</h2>
-      <div>
-        <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary me-2">Edit Ticket</a>
-        <a href="/tickets" class="btn btn-secondary">Back to List</a>
+    <p><em>Loading ticket details...</em></p>
+  }
+}
+else
+{
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>#@ticket.Id - @ticket.Title</h3>
+    <div>
+      <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary btn-sm me-2">Edit Ticket</a>
+      <a href="/tickets" class="btn btn-outline-secondary btn-sm">Back to Board</a>
+    </div>
+  </div>
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <p class="card-text">@ticket.Description</p>
+      <div class="mt-3">
+        <span class="badge bg-info text-dark me-2">Status: @ticket.Status</span>
+        <span class="badge bg-warning text-dark me-2">Priority: @ticket.Priority</span>
+        <span class="badge bg-secondary">Category: @ticket.Category</span>
       </div>
     </div>
+  </div>
 
-    <div class="card mb-4">
-      <div class="card-body">
-        <div class="mb-2">
-          <span class="badge bg-info text-dark">Category: @ticket.Category</span>
-          <span class="badge bg-warning text-dark me-2">Priority: @ticket.Priority</span>
-          <span class="badge bg-success">Status: @ticket.Status</span>
-        </div>
-        <p class="card-text mt-3">@ticket.Description</p>
-      </div>
-    </div>
-
-    <h4>Discussion Thread (@ticket.Comments.Count)</h4>
-    <hr />
-
-    <!-- Render Comments List -->
-    @if (ticket.Comments.Any())
+  <!-- Discussion Thread / Comments -->
+  <h4>Comments (@ticket.Comments.Count)</h4>
+  <div class="mb-4">
+    @if (!ticket.Comments.Any())
     {
-      <div class="list-group mb-4">
-        @foreach (var comment in ticket.Comments)
-        {
-          <div class="list-group-item">
-            <div class="d-flex w-100 justify-content-between">
-              <h6 class="mb-1 fw-bold">@comment.Author</h6>
-              <small class="text-muted">@comment.CreatedAt.ToLocalTime().ToString("g")</small>
-            </div>
-            <p class="mb-1">@comment.Text</p>
-          </div>
-        }
-      </div>
+      <p class="text-muted fst-italic">No comments yet. Start the conversation below!</p>
     }
     else
     {
-      <p class="text-muted mb-4">No comments added yet. Be the first to respond!</p>
-    }
-
-    <!-- Add Comment Form -->
-    <div class="card bg-light">
-      <div class="card-body">
-        <h5 class="card-title mb-3">Add a Comment</h5>
-        <EditForm Model="newComment" OnValidSubmit="AddComment">
-          <DataAnnotationsValidator />
-
-          <div class="mb-3">
-            <InputTextArea @bind-Value="newComment.Text" class="form-control" rows="3" placeholder="Write a response..." />
-            <ValidationMessage For="@(() => newComment.Text)" class="text-danger small" />
+      @foreach (var comment in ticket.Comments)
+      {
+        <div class="card mb-2 shadow-sm" @key="comment.Id">
+          <div class="card-body py-2">
+            <div class="d-flex justify-content-between">
+              <strong>@comment.Author</strong>
+              <span class="text-muted small">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
+            </div>
+            <p class="mb-0 mt-1">@comment.Text</p>
           </div>
+        </div>
+      }
+    }
+  </div>
 
-          <button type="submit" class="btn btn-primary">Post Comment</button>
-        </EditForm>
-      </div>
+  <!-- Add Comment Form -->
+  <div class="card bg-light shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Add a Comment</h5>
+      <p class="small text-muted mb-2">
+        Posting as: <strong>@(UserState.CurrentUser?.Name ?? "Anonymous")</strong> (@(UserState.CurrentUser?.Role ?? "Guest"))
+      </p>
+
+      <EditForm Model="newComment" OnValidSubmit="PostComment">
+        <DataAnnotationsValidator />
+        <div class="mb-3">
+          <InputTextArea @bind-Value="newComment.Text" class="form-control" rows="3" placeholder="Write a response..." />
+          <ValidationMessage For="@(() => newComment.Text)" class="text-danger small" />
+        </div>
+        <button type="submit" class="btn btn-primary">Post Comment</button>
+      </EditForm>
     </div>
-  }
-</div>
+  </div>
+}
 
 @code {
   [Parameter]
@@ -79,35 +96,51 @@
 
   private Ticket? ticket;
   private Comment newComment = new();
+  private bool notFound = false;
 
-  protected override void OnInitialized()
+  protected override async Task OnInitializedAsync()
   {
-    // Seed initial ticket details and comments
-    ticket = new Ticket
-    {
-      Id = Id,
-      Title = "VPN Disconnecting frequently",
-      Category = TicketCategory.Network,
-      Priority = TicketPriority.High,
-      Description = "Every 10 minutes the VPN connection drops out while working remotely.",
-      Comments = new List<Comment>
-            {
-                new Comment { Id = 1, TicketId = Id, Author = "IT Support Agent", Text = "We are investigating router logs.", CreatedAt = DateTime.UtcNow.AddHours(-2) }
-            }
-    };
+    // 1. Subscribe to UserState changes so switching active users updates the UI in real time
+    UserState.OnChange += HandleUserStateChanged;
+
+    // 2. Fetch ticket data from service
+    await LoadTicketAsync();
   }
 
-  private void AddComment()
+  protected override async Task OnParametersSetAsync()
   {
-    if (ticket == null) return;
+    await LoadTicketAsync();
+  }
 
-    newComment.Id = ticket.Comments.Count + 1;
-    newComment.TicketId = ticket.Id;
-    newComment.CreatedAt = DateTime.UtcNow;
+  private async Task LoadTicketAsync()
+  {
+    ticket = await TicketService.GetTicketByIdAsync(Id);
+    notFound = (ticket == null);
+  }
 
-    ticket.Comments.Add(newComment);
+  private async Task PostComment()
+  {
+    if (ticket != null && !string.IsNullOrWhiteSpace(newComment.Text))
+    {
+      // Dynamically assign author from current state container
+      newComment.Author = UserState.CurrentUser?.Name ?? "Anonymous";
 
-    // Reset the form model for the next comment
-    newComment = new Comment();
+      await TicketService.AddCommentAsync(ticket.Id, newComment);
+
+      // Reset input form model
+      newComment = new Comment();
+    }
+  }
+
+  private void HandleUserStateChanged()
+  {
+    // Thread-safe UI refresh when active user selection changes
+    InvokeAsync(StateHasChanged);
+  }
+
+  // Always unsubscribe from state events to prevent memory leaks / lapsed listeners
+  public void Dispose()
+  {
+    UserState.OnChange -= HandleUserStateChanged;
   }
 }

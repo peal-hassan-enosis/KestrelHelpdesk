@@ -1,68 +1,68 @@
 ﻿@page "/tickets"
-@rendermode InteractiveServer
-@using KestrelHelpdesk.Models
 @using KestrelHelpdesk.Components.UI
-@inject NavigationManager NavManager
+@using KestrelHelpdesk.Models
+@using KestrelHelpdesk.Services
+@inject ITicketService TicketService
+@inject NavigationManager Nav
 
-<h3>Ticket Board</h3>
+@rendermode InteractiveServer
 
-<div class="mb-4 p-3 border rounded bg-light">
-  <label class="form-label fw-bold">Filter by Status:</label>
-  <select class="form-select w-25" @bind="selectedStatus" @bind:after="OnStatusDropdownChanged">
-    <option value="">All Tickets</option>
-    @foreach (var status in Enum.GetValues<TicketStatus>())
-    {
-      <option value="@status">@status</option>
-    }
-  </select>
+<PageTitle>Tickets - Kestrel Helpdesk</PageTitle>
 
-  <div class="mt-2 text-muted">
-    <strong>Showing @filteredTickets.Count of @allTickets.Count tickets</strong>
-  </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Ticket Board</h3>
+    <a href="/tickets/new" class="btn btn-primary">Create Ticket</a>
 </div>
 
-<TicketList Tickets="filteredTickets" />
+<div class="row mb-3">
+    <div class="col-md-4">
+        <select class="form-select" @bind="SelectedStatus">
+            <option value="">All Statuses</option>
+            <option value="Open">Open</option>
+            <option value="InProgress">InProgress</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Closed">Closed</option>
+        </select>
+    </div>
+</div>
+
+@if (tickets == null)
+{
+    <p><em>Loading tickets...</em></p>
+}
+else
+{
+    <p class="text-muted">Showing @tickets.Count tickets</p>
+    <div class="row g-3">
+        @foreach (var ticket in tickets)
+        {
+            <div class="col-md-6 col-lg-4" @key="ticket.Id">
+                <TicketCard Ticket="ticket" />
+            </div>
+        }
+    </div>
+}
 
 @code {
-  [Parameter]
-  [SupplyParameterFromQuery(Name = "status")]
-  public string? StatusQueryString { get; set; }
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? StatusQuery { get; set; }
 
-  public TicketStatus? selectedStatus {get; set; }
+    private List<Ticket>? tickets;
 
-  protected override void OnParametersSet()
-  {
-    // ignoreCase: true allows "?status=open" or "?status=Open" to work perfectly
-    if (Enum.TryParse<TicketStatus>(StatusQueryString, ignoreCase: true, out var parsedStatus))
+    private string SelectedStatus
     {
-      selectedStatus = parsedStatus;
+        get => StatusQuery ?? "";
+        set
+        {
+            var uri = string.IsNullOrEmpty(value) 
+                ? "/tickets" 
+                : $"/tickets?status={value}";
+            Nav.NavigateTo(uri);
+        }
     }
-    else
+
+    protected override async Task OnParametersSetAsync()
     {
-      // If the URL has junk text or is completely empty, default to "All Tickets"
-      selectedStatus = null;
+        tickets = await TicketService.GetTicketsAsync(StatusQuery);
     }
-  }
-
-  private void OnStatusDropdownChanged()
-  {
-    var selectedValue = selectedStatus?.ToString();
-
-    // Updates the browser URL to ?status=X without a full page reload
-    var newUrl = NavManager.GetUriWithQueryParameter("status", selectedValue);
-    NavManager.NavigateTo(newUrl);
-  }
-
-  private List<Ticket> allTickets = Enumerable.Range(1, 20).Select(i => new Ticket
-  {
-    Id = i,
-    Title = $"Support Issue #{i}",
-    Description = "Example description text for testing UI rendering.",
-    Status = (TicketStatus)(i % 3),
-    Priority = (TicketPriority)(i % 4)
-  }).ToList();
-
-  private List<Ticket> filteredTickets => selectedStatus.HasValue
-      ? allTickets.Where(t => t.Status == selectedStatus.Value).ToList()
-      : allTickets;
 }

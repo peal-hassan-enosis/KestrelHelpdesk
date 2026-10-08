@@ -1,24 +1,25 @@
 ﻿@page "/tickets/new"
 @using KestrelHelpdesk.Models
+@using KestrelHelpdesk.Services
+@using KestrelHelpdesk.State
+@inject ITicketService TicketService
+@inject CurrentUserState UserState
 @inject NavigationManager Nav
+
 @rendermode InteractiveServer
 
-<PageTitle>New Ticket - Kestrel Helpdesk</PageTitle>
+<PageTitle>Create New Ticket</PageTitle>
 
-<div class="container mt-4" style="max-width: 800px;">
-    <h2>Create New Support Ticket</h2>
-    <hr />
+<h3>Create Ticket</h3>
 
-    <TicketForm TicketModel="newTicket" SubmitButtonText="Create Ticket" OnValidSubmit="CreateTicket" />
-</div>
+<TicketForm TicketModel="newTicket" SubmitButtonText="Create Ticket" OnValidSubmit="CreateTicket" />
 
 @code {
-    private Ticket newTicket = new();
+  private Ticket newTicket = new();
 
-    private void CreateTicket(Ticket ticket)
-    {
-        // TODO: Persist via ITicketService in Assignment 5
-        ticket.Id = new Random().Next(100, 999);
-        Nav.NavigateTo($"/tickets/{ticket.Id}");
-    }
+  private async Task CreateTicket()
+  {
+    await TicketService.CreateTicketAsync(newTicket);
+    Nav.NavigateTo($"/tickets/{newTicket.Id}");
+  }
 }

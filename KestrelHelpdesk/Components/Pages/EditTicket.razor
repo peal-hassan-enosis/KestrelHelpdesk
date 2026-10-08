@@ -1,46 +1,78 @@
 ﻿@page "/tickets/{id:int}/edit"
 @using KestrelHelpdesk.Models
-@rendermode InteractiveServer
+@using KestrelHelpdesk.Services
+@using KestrelHelpdesk.State
+@inject ITicketService TicketService
+@inject CurrentUserState UserState
 @inject NavigationManager Nav
 
-<PageTitle>Edit Ticket #@Id - Kestrel Helpdesk</PageTitle>
+@rendermode InteractiveServer
 
-<div class="container mt-4" style="max-width: 800px;">
-    @if (ticketToEdit == null)
+<PageTitle>Edit Ticket #@Id</PageTitle>
+
+@if (ticketToEdit == null)
+{
+  @if (notFound)
+  {
+    <div class="alert alert-danger">
+      <h4>Ticket Not Found</h4>
+      <p>The requested ticket (#@Id) does not exist.</p>
+      <a href="/tickets" class="btn btn-outline-secondary">Back to Ticket Board</a>
+    </div>
+  }
+  else
+  {
+    <p><em>Loading ticket details...</em></p>
+  }
+}
+else
+{
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Edit Ticket #@ticketToEdit.Id</h3>
+    <a href="/tickets/@ticketToEdit.Id" class="btn btn-outline-secondary btn-sm">Cancel</a>
+  </div>
+
+  <!-- Reusable TicketForm Component for Editing -->
+  <TicketForm TicketModel="ticketToEdit" SubmitButtonText="Update Ticket" OnValidSubmit="UpdateTicket" />
+}
+
+@code {
+  [Parameter]
+  public int Id { get; set; }
+
+  private Ticket? ticketToEdit;
+  private bool notFound = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    var existingTicket = await TicketService.GetTicketByIdAsync(Id);
+
+    if (existingTicket == null)
     {
-        <p>Loading ticket...</p>
+      notFound = true;
     }
     else
     {
-        <h2>Edit Ticket #@ticketToEdit.Id</h2>
-        <hr />
-
-        <TicketForm TicketModel="ticketToEdit" SubmitButtonText="Update Ticket" OnValidSubmit="UpdateTicket" />
+      // Clone or copy to avoid modifying live service state before form submission
+      ticketToEdit = new Ticket
+      {
+        Id = existingTicket.Id,
+        Title = existingTicket.Title,
+        Description = existingTicket.Description,
+        Priority = existingTicket.Priority,
+        Status = existingTicket.Status,
+        Category = existingTicket.Category,
+        Comments = existingTicket.Comments
+      };
     }
-</div>
+  }
 
-@code {
-    [Parameter]
-    public int Id { get; set; }
-
-    private Ticket? ticketToEdit;
-
-    protected override void OnInitialized()
+  private async Task UpdateTicket()
+  {
+    if (ticketToEdit != null)
     {
-        // Placeholder data; will connect to service/DB in Topic 5/6
-        ticketToEdit = new Ticket
-        {
-            Id = Id,
-            Title = "Printer not working on 3rd Floor",
-            Category = TicketCategory.Hardware,
-            Priority = TicketPriority.Medium,
-            Description = "Paper jam error won't clear."
-        };
+      await TicketService.UpdateTicketAsync(ticketToEdit);
+      Nav.NavigateTo($"/tickets/{ticketToEdit.Id}");
     }
-
-    private void UpdateTicket(Ticket ticket)
-    {
-        // TODO: Save changes via ITicketService
-        Nav.NavigateTo($"/tickets/{ticket.Id}");
-    }
+  }
 }
