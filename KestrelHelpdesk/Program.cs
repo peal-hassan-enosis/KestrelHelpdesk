@@ -1,6 +1,8 @@
 using KestrelHelpdesk.Components;
+using KestrelHelpdesk.Data;
 using KestrelHelpdesk.Services;
 using KestrelHelpdesk.State;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,10 @@ builder.Services.AddRazorComponents()
 // Register Scoped Services (per Circuit / Tab session)
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<CurrentUserState>();
+
+// Register EF Core DbContextFactory for Blazor Server
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 

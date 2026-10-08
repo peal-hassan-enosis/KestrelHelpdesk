@@ -37,6 +37,17 @@
   </div>
 
   <div class="mb-3">
+    <label class="form-label font-weight-bold">Status</label>
+    <InputSelect @bind-Value="TicketModel.Status" class="form-select">
+      @foreach (var status in Enum.GetValues<TicketStatus>())
+      {
+        <option value="@status">@status</option>
+      }
+    </InputSelect>
+    <ValidationMessage For="@(() => TicketModel.Status)" class="text-danger small" />
+  </div>
+
+  <div class="mb-3">
     <label class="form-label font-weight-bold">Description</label>
     <InputTextArea @bind-Value="TicketModel.Description" class="form-control" rows="5" placeholder="Detailed explanation of the issue" />
     <ValidationMessage For="@(() => TicketModel.Description)" class="text-danger small" />

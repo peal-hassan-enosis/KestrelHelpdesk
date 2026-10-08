@@ -1,74 +1,95 @@
 ﻿namespace KestrelHelpdesk.Services;
 
+using KestrelHelpdesk.Data;
 using KestrelHelpdesk.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Components.QuickGrid;
 
 public class TicketService : ITicketService
 {
-    private readonly List<Ticket> _tickets;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
-    public TicketService()
+    public TicketService(IDbContextFactory<ApplicationDbContext> factory)
     {
-        // Hardcoded initial data
-        _tickets = Enumerable.Range(1, 20).Select(i => new Ticket
-        {
-            Id = i,
-            Title = $"Support Issue #{i}",
-            Description = "Example description text for testing UI rendering.",
-            Status = (TicketStatus)(i % 3),
-            Priority = (TicketPriority)(i % 4),
-            Category = (TicketCategory)(i % 4),
-            Comments = new List<Comment>()
-        }).ToList();
+        _factory = factory;
     }
 
-    public Task<List<Ticket>> GetTicketsAsync(string? statusFilter = null)
+    public async ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(GridItemsProviderRequest<Ticket> request, string? statusFilter)
     {
-        var query = _tickets.AsEnumerable();
+        using var context = await _factory.CreateDbContextAsync();
 
+        var query = context.Tickets.AsNoTracking();
+
+        // Server-side filtering
         if (!string.IsNullOrEmpty(statusFilter) && Enum.TryParse<TicketStatus>(statusFilter, true, out var parsedStatus))
         {
             query = query.Where(t => t.Status == parsedStatus);
         }
 
-        return Task.FromResult(query.ToList());
+        var totalCount = await query.CountAsync();
+
+        // Server-side sorting
+        if (request.SortByColumn != null)
+        {
+            var sortProperty = request.SortByColumn.Title;
+            query = sortProperty switch
+            {
+                "Title" => request.SortByAscending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title),
+                "Status" => request.SortByAscending ? query.OrderBy(t => t.Status) : query.OrderByDescending(t => t.Status),
+                "Priority" => request.SortByAscending ? query.OrderBy(t => t.Priority) : query.OrderByDescending(t => t.Priority),
+                _ => request.SortByAscending ? query.OrderBy(t => t.CreatedAt) : query.OrderByDescending(t => t.CreatedAt)
+            };
+        }
+        else
+        {
+            query = query.OrderByDescending(t => t.Id);
+        }
+
+        // Server-side paging
+        var items = await query
+            .Skip(request.StartIndex)
+            .Take(request.Count ?? 10)
+            .ToListAsync();
+
+        return GridItemsProviderResult.From(items, totalCount);
     }
 
-    public Task<Ticket?> GetTicketByIdAsync(int id)
+    public async Task<Ticket?> GetTicketByIdAsync(int id)
     {
-        var ticket = _tickets.FirstOrDefault(t => t.Id == id);
-        return Task.FromResult(ticket);
+        using var context = await _factory.CreateDbContextAsync();
+        return await context.Tickets
+            .Include(t => t.Comments)
+            .FirstOrDefaultAsync(t => t.Id == id);
     }
 
-    public Task CreateTicketAsync(Ticket ticket)
+    public async Task CreateTicketAsync(Ticket ticket)
     {
-        ticket.Id = _tickets.Max(t => t.Id) + 1;
-        _tickets.Add(ticket);
-        return Task.CompletedTask;
+        using var context = await _factory.CreateDbContextAsync();
+        ticket.CreatedAt = DateTime.UtcNow;
+        context.Tickets.Add(ticket);
+        await context.SaveChangesAsync();
     }
 
-    public Task UpdateTicketAsync(Ticket ticket)
+    public async Task UpdateTicketAsync(Ticket ticket)
     {
-        var existing = _tickets.FirstOrDefault(t => t.Id == ticket.Id);
+        using var context = await _factory.CreateDbContextAsync();
+        var existing = await context.Tickets.FindAsync(ticket.Id);
         if (existing != null)
         {
             existing.Title = ticket.Title;
             existing.Description = ticket.Description;
             existing.Priority = ticket.Priority;
             existing.Status = ticket.Status;
-            existing.Category = ticket.Category;
+            await context.SaveChangesAsync();
         }
-        return Task.CompletedTask;
     }
 
-    public Task AddCommentAsync(int ticketId, Comment comment)
+    public async Task AddCommentAsync(int ticketId, Comment comment)
     {
-        var ticket = _tickets.FirstOrDefault(t => t.Id == ticketId);
-        if (ticket != null)
-        {
-            comment.Id = ticket.Comments.Count + 1;
-            comment.CreatedAt = DateTime.UtcNow;
-            ticket.Comments.Add(comment);
-        }
-        return Task.CompletedTask;
+        using var context = await _factory.CreateDbContextAsync();
+        comment.TicketId = ticketId;
+        comment.CreatedAt = DateTime.UtcNow;
+        context.Comments.Add(comment);
+        await context.SaveChangesAsync();
     }
 }

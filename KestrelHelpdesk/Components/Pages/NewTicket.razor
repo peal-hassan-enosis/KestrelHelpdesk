@@ -19,6 +19,7 @@
 
   private async Task CreateTicket()
   {
+    newTicket.CreatedBy = UserState.CurrentUser?.Name ?? "Anonymous";
     await TicketService.CreateTicketAsync(newTicket);
     Nav.NavigateTo($"/tickets/{newTicket.Id}");
   }
