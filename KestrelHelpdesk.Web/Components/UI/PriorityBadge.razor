@@ -1,0 +1,17 @@
+﻿@using KestrelHelpdesk.Core.Models
+
+<span class="badge @GetBadgeClass()">@Priority.ToString()</span>
+
+@code {
+  [Parameter, EditorRequired]
+  public TicketPriority Priority { get; set; }
+
+  private string GetBadgeClass() => Priority switch
+  {
+    TicketPriority.Low => "bg-info text-dark",
+    TicketPriority.Medium => "bg-secondary",
+    TicketPriority.High => "bg-warning text-dark",
+    TicketPriority.Critical => "bg-danger",
+    _ => "bg-light"
+  };
+}

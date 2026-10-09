@@ -1,0 +1,16 @@
+﻿@using KestrelHelpdesk.Core.Models
+
+<span class="badge @GetBadgeClass()">@Status.ToString()</span>
+
+@code {
+  [Parameter, EditorRequired]
+  public TicketStatus Status { get; set; }
+
+  private string GetBadgeClass() => Status switch
+  {
+    TicketStatus.Open => "bg-primary",
+    TicketStatus.InProgress => "bg-warning text-dark",
+    TicketStatus.Resolved => "bg-success",
+    _ => "bg-secondary"
+  };
+}
