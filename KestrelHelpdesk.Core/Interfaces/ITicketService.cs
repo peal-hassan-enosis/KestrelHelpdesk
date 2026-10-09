@@ -12,4 +12,5 @@ public interface ITicketService
     Task CreateTicketAsync(Ticket ticket);
     Task UpdateTicketAsync(Ticket ticket);
     Task AddCommentAsync(int ticketId, Comment comment);
+    Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync();
 }

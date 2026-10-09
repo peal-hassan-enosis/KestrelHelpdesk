@@ -1,0 +1,102 @@
+﻿@page "/dashboard"
+
+@using KestrelHelpdesk.Core.Interfaces
+@using KestrelHelpdesk.Core.Models
+
+@inject ITicketService TicketService
+@inject IJSRuntime JS
+
+@implements IAsyncDisposable
+
+@rendermode InteractiveServer
+
+<PageTitle>Dashboard - Kestrel Helpdesk</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2>Helpdesk Dashboard</h2>
+    <p class="text-muted mb-0">
+      Ticket overview by status
+    </p>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <h5 class="card-title">Tickets by Status</h5>
+
+    <div style="height: 400px;">
+      <canvas id="ticketStatusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+@code {
+  private IJSObjectReference? module;
+
+  private Dictionary<TicketStatus, int> statusCounts = new();
+
+  private bool chartInitialized;
+
+  protected override async Task OnInitializedAsync()
+  {
+    statusCounts = await TicketService.GetTicketStatusCountsAsync();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (chartInitialized)
+    {
+      return;
+    }
+
+    module ??= await JS.InvokeAsync<IJSObjectReference>(
+        "import",
+        "./js/dashboard.js");
+
+    var labels = new[]
+    {
+        "Open",
+        "In Progress",
+        "Resolved"
+    };
+
+    var values = new[]
+    {
+        GetCount(TicketStatus.Open),
+        GetCount(TicketStatus.InProgress),
+        GetCount(TicketStatus.Resolved)
+    };
+
+    await module.InvokeVoidAsync(
+        "createStatusChart",
+        "ticketStatusChart",
+        labels,
+        values);
+
+    chartInitialized = true;
+  }
+
+  private int GetCount(TicketStatus status)
+  {
+    return statusCounts.TryGetValue(status, out var count)
+        ? count
+        : 0;
+  }
+
+  public async ValueTask DisposeAsync()
+  {
+    if (module is not null)
+    {
+      try
+      {
+        await module.InvokeVoidAsync("destroyChart");
+        await module.DisposeAsync();
+      }
+      catch (JSDisconnectedException)
+      {
+        // The circuit may already be disconnected.
+      }
+    }
+  }
+}

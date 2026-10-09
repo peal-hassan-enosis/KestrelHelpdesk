@@ -84,4 +84,19 @@ public class TicketRepository : ITicketRepository
         context.Comments.Add(comment);
         await context.SaveChangesAsync();
     }
+
+    public async Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync()
+    {
+        using var context = await _factory.CreateDbContextAsync();
+
+        return await context.Tickets
+            .AsNoTracking()
+            .GroupBy(t => t.Status)
+            .Select(g => new
+            {
+                Status = g.Key,
+                Count = g.Count()
+            })
+            .ToDictionaryAsync(x => x.Status, x => x.Count);
+    }
 }

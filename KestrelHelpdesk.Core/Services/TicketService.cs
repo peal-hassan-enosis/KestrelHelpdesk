@@ -53,4 +53,9 @@ public class TicketService : ITicketService
 
         await _repository.AddCommentAsync(comment);
     }
+
+    public async Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync()
+    {
+        return await _repository.GetTicketStatusCountsAsync();
+    }
 }

@@ -1,4 +1,6 @@
-﻿@using KestrelHelpdesk.Core.Models
+﻿@inject IJSRuntime JS
+@implements IAsyncDisposable
+@using KestrelHelpdesk.Core.Models
 
 <EditForm Model="TicketModel" OnValidSubmit="HandleValidSubmit">
   <DataAnnotationsValidator />
@@ -6,7 +8,10 @@
 
   <div class="mb-3">
     <label class="form-label font-weight-bold">Ticket Title</label>
-    <InputText @bind-Value="TicketModel.Title" class="form-control" placeholder="Brief summary of the issue" />
+    <InputText id="ticket-title"
+               @bind-Value="TicketModel.Title"
+               class="form-control"
+               placeholder="Brief summary of the issue" />
     <ValidationMessage For="@(() => TicketModel.Title)" class="text-danger small" />
   </div>
 
@@ -68,12 +73,37 @@
 
   [Parameter]
   public EventCallback<Ticket> OnValidSubmit { get; set; }
+  private IJSObjectReference? module;
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender)
+    {
+      return;
+    }
+
+    module = await JS.InvokeAsync<IJSObjectReference>(
+        "import",
+        "./js/ticket-form.js");
+
+    await module.InvokeVoidAsync(
+        "focusElement",
+        "ticket-title");
+  }
 
   private async Task HandleValidSubmit()
   {
     if (OnValidSubmit.HasDelegate)
     {
       await OnValidSubmit.InvokeAsync(TicketModel);
+    }
+  }
+
+  public async ValueTask DisposeAsync()
+  {
+    if (module is not null)
+    {
+      await module.DisposeAsync();
     }
   }
 }

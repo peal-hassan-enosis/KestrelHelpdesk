@@ -9,4 +9,5 @@ public interface ITicketRepository
     Task CreateTicketAsync(Ticket ticket);
     Task UpdateTicketAsync(Ticket ticket);
     Task AddCommentAsync(Comment comment);
+    Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync();
 }

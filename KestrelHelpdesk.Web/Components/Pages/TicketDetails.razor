@@ -5,6 +5,8 @@
 @using KestrelHelpdesk.Web.State
 @inject ITicketService TicketService
 @inject CurrentUserState UserState
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
 @implements IDisposable
 
 <PageTitle>Ticket #@Id - Kestrel Helpdesk</PageTitle>
@@ -26,8 +28,20 @@ else
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>#@ticket.Id - @ticket.Title</h2>
     <div>
-      <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary me-2">Edit Ticket</a>
-      <a href="/tickets" class="btn btn-outline-secondary">Back to Board</a>
+      <button class="btn btn-outline-primary me-2"
+              @onclick="CopyTicketLink">
+        Copy Link
+      </button>
+
+      <a href="/tickets/@ticket.Id/edit"
+         class="btn btn-outline-primary me-2">
+        Edit Ticket
+      </a>
+
+      <a href="/tickets"
+         class="btn btn-outline-secondary">
+        Back to Board
+      </a>
     </div>
   </div>
 
@@ -126,6 +140,13 @@ else
   {
     // Thread-safe UI refresh when active user selection changes
     InvokeAsync(StateHasChanged);
+  }
+
+  private async Task CopyTicketLink()
+  {
+    await JS.InvokeVoidAsync(
+        "navigator.clipboard.writeText",
+        NavigationManager.Uri);
   }
 
   // Always unsubscribe from state events to prevent memory leaks / lapsed listeners
