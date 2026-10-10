@@ -15,9 +15,21 @@
 </head>
 
 <body>
-  <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="PageRenderMode" />
+
     <ReconnectModal />
+
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
 </body>
 
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private IComponentRenderMode? PageRenderMode =>
+        HttpContext.AcceptsInteractiveRouting()
+            ? InteractiveServer
+            : null;
+}
 </html>
