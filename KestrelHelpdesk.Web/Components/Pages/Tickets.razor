@@ -2,12 +2,14 @@
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
+@using KestrelHelpdesk.Web.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject ITicketService TicketService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject BrowserTimeZoneService BrowserTimeZone
 
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -59,7 +61,9 @@
       <span class="badge @GetPriorityBadgeClass(ticket.Priority)">@ticket.Priority</span>
     </TemplateColumn>
     <TemplateColumn Title="Assigned To" Context="ticket">@GetAssigneeName(ticket.AssignedToUserId)</TemplateColumn>
-    <PropertyColumn Property="@(t => t.CreatedAt.ToLocalTime())" Title="Created" Sortable="true" Format="g" />
+    <TemplateColumn Title="Created" Context="ticket">
+      @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(ticket.CreatedAt) : "Loading local time...")
+    </TemplateColumn>
     <TemplateColumn Title="Assignment" Context="ticket">
       <AuthorizeView Roles="Manager" Context="auth">
         <select class="form-select form-select-sm" value="@ticket.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(ticket.Id, e)">
@@ -114,6 +118,17 @@
     activeScope = isManager ? TicketScope.ManagerAll : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
     agents = await TicketService.GetAgentsAsync();
     ticketProvider = async req => await TicketService.GetPagedTicketsAsync(req, StatusQuery, activeScope, notAssignedOnly);
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender)
+    {
+      return;
+    }
+
+    await BrowserTimeZone.InitializeAsync();
+    await InvokeAsync(StateHasChanged);
   }
 
   private async Task SetScope(TicketScope scope)
