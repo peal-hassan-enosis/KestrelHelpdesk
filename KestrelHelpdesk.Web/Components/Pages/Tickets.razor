@@ -1,4 +1,4 @@
-﻿@page "/tickets"
+@page "/tickets"
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
@@ -52,13 +52,13 @@
   <QuickGrid @ref="grid" ItemsProvider="@ticketProvider" Pagination="@pagination" Class="table table-hover align-middle" Theme="bootstrap">
     <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
     <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
-    <TemplateColumn Title="Status" Sortable="true"><StatusBadge Status="@context.Status" /></TemplateColumn>
-    <TemplateColumn Title="Priority" Sortable="true"><PriorityBadge Priority="@context.Priority" /></TemplateColumn>
-    <TemplateColumn Title="Assigned To">@GetAssigneeName(context.AssignedToUserId)</TemplateColumn>
+    <TemplateColumn Title="Status" Sortable="true" Context="ticket"><StatusBadge Status="@ticket.Status" /></TemplateColumn>
+    <TemplateColumn Title="Priority" Sortable="true" Context="ticket"><PriorityBadge Priority="@ticket.Priority" /></TemplateColumn>
+    <TemplateColumn Title="Assigned To" Context="ticket">@GetAssigneeName(ticket.AssignedToUserId)</TemplateColumn>
     <PropertyColumn Property="@(t => t.CreatedAt.ToLocalTime())" Title="Created" Sortable="true" Format="g" />
-    <TemplateColumn Title="Assignment">
-      <AuthorizeView Roles="Manager">
-        <select class="form-select form-select-sm" value="@context.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(context.Id, e)">
+    <TemplateColumn Title="Assignment" Context="ticket">
+      <AuthorizeView Roles="Manager" Context="auth">
+        <select class="form-select form-select-sm" value="@ticket.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(ticket.Id, e)">
           <option value="">Unassigned</option>
           @foreach (var agent in agents)
           {
@@ -66,23 +66,23 @@
           }
         </select>
       </AuthorizeView>
-      <AuthorizeView Roles="Agent">
+      <AuthorizeView Roles="Agent" Context="auth">
         @if (activeScope == TicketScope.AgentCreated)
         {
-          @if (context.AssignedToUserId == currentUserId)
+          @if (ticket.AssignedToUserId == currentUserId)
           {
-            <button class="btn btn-sm btn-outline-secondary" @onclick="() => AssignToMe(context.Id, null)">Unassign from Me</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="() => AssignToMe(ticket.Id, null)">Unassign from Me</button>
           }
           else
           {
-            <button class="btn btn-sm btn-outline-primary" @onclick="() => AssignToMe(context.Id, currentUserId)">Assign to Me</button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="() => AssignToMe(ticket.Id, currentUserId)">Assign to Me</button>
           }
         }
       </AuthorizeView>
     </TemplateColumn>
-    <TemplateColumn Title="Actions">
-      <a href="/tickets/@context.Id" class="btn btn-sm btn-outline-primary">View</a>
-      <a href="/tickets/@context.Id/edit" class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
+    <TemplateColumn Title="Actions" Context="ticket">
+      <a href="/tickets/@ticket.Id" class="btn btn-sm btn-outline-primary">View</a>
+      <a href="/tickets/@ticket.Id/edit" class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
     </TemplateColumn>
   </QuickGrid>
 </div>
