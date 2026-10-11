@@ -7,6 +7,7 @@ using KestrelHelpdesk.Core.Services;
 using KestrelHelpdesk.Web.Components;
 using KestrelHelpdesk.Web.Components.Account;
 using KestrelHelpdesk.Web.Security;
+using KestrelHelpdesk.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -21,6 +22,7 @@ builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ICurrentUserContext, IdentityCurrentUserContext>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
+builder.Services.AddScoped<BrowserTimeZoneService>();
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
