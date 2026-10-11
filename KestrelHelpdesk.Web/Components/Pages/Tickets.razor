@@ -142,10 +142,10 @@
     if (grid is not null) await grid.RefreshDataAsync();
   }
 
-  private void OnStatusChanged(ChangeEventArgs e)
+  private async Task OnStatusChanged(ChangeEventArgs e)
   {
-    var selectedValue = e.Value?.ToString();
-    Nav.NavigateTo(string.IsNullOrEmpty(selectedValue) ? "/tickets" : $"/tickets?status={selectedValue}");
+    StatusQuery = e.Value?.ToString();
+    await RefreshGrid();
   }
 
   private async Task ManagerAssignmentChanged(int ticketId, ChangeEventArgs e)
