@@ -2,10 +2,12 @@
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
+@using KestrelHelpdesk.Web.Services
 @using Microsoft.AspNetCore.Authorization
 @inject ITicketService TicketService
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
+@inject BrowserTimeZoneService BrowserTimeZone
 
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -43,6 +45,9 @@ else
         <PriorityBadge Priority="@ticket.Priority" />
         <span class="badge text-bg-light">Assigned To: @GetAssigneeName(ticket.AssignedToUserId)</span>
       </div>
+      <small class="text-muted d-block mt-3">
+        Created: @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(ticket.CreatedAt) : "Loading local time...")
+      </small>
     </div>
   </div>
 
@@ -56,7 +61,9 @@ else
           <div class="card-body py-3">
             <div class="d-flex w-100 justify-content-between align-items-center mb-2">
               <h6 class="mb-0 fw-bold">@comment.Author</h6>
-              <small class="text-muted">@comment.CreatedAt.ToLocalTime().ToString("g")</small>
+              <small class="text-muted">
+                @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(comment.CreatedAt) : "Loading local time...")
+              </small>
             </div>
             <p class="mb-0">@comment.Text</p>
           </div>
@@ -90,6 +97,17 @@ else
   protected override async Task OnParametersSetAsync()
   {
     if (ticket?.Id != Id) await LoadTicketAsync();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender)
+    {
+      return;
+    }
+
+    await BrowserTimeZone.InitializeAsync();
+    await InvokeAsync(StateHasChanged);
   }
 
   private async Task LoadTicketAsync()
