@@ -7,17 +7,14 @@
   <ValidationSummary class="alert alert-danger" />
 
   <div class="mb-3">
-    <label class="form-label font-weight-bold">Ticket Title</label>
-    <InputText id="ticket-title"
-               @bind-Value="TicketModel.Title"
-               class="form-control"
-               placeholder="Brief summary of the issue" />
+    <label class="form-label fw-bold">Ticket Title</label>
+    <InputText id="ticket-title" @bind-Value="TicketModel.Title" class="form-control" placeholder="Brief summary of the issue" />
     <ValidationMessage For="@(() => TicketModel.Title)" class="text-danger small" />
   </div>
 
   <div class="row mb-3">
     <div class="col-md-6">
-      <label class="form-label font-weight-bold">Category</label>
+      <label class="form-label fw-bold">Category</label>
       <InputSelect @bind-Value="TicketModel.Category" class="form-select">
         <option value="">-- Select Category --</option>
         @foreach (var cat in Enum.GetValues<TicketCategory>())
@@ -27,9 +24,8 @@
       </InputSelect>
       <ValidationMessage For="@(() => TicketModel.Category)" class="text-danger small" />
     </div>
-
     <div class="col-md-6">
-      <label class="form-label font-weight-bold">Priority</label>
+      <label class="form-label fw-bold">Priority</label>
       <InputSelect @bind-Value="TicketModel.Priority" class="form-select">
         <option value="">-- Select Priority --</option>
         @foreach (var prio in Enum.GetValues<TicketPriority>())
@@ -41,19 +37,28 @@
     </div>
   </div>
 
-  <div class="mb-3">
-    <label class="form-label font-weight-bold">Status</label>
-    <InputSelect @bind-Value="TicketModel.Status" class="form-select">
-      @foreach (var status in Enum.GetValues<TicketStatus>())
+  @if (!IsCreateMode)
+  {
+    <div class="mb-3">
+      <label class="form-label fw-bold">Status</label>
+      @if (CanEditStatus)
       {
-        <option value="@status">@status</option>
+        <InputSelect @bind-Value="TicketModel.Status" class="form-select">
+          @foreach (var status in Enum.GetValues<TicketStatus>())
+          {
+            <option value="@status">@status</option>
+          }
+        </InputSelect>
       }
-    </InputSelect>
-    <ValidationMessage For="@(() => TicketModel.Status)" class="text-danger small" />
-  </div>
+      else
+      {
+        <input class="form-control" value="@TicketModel.Status" disabled />
+      }
+    </div>
+  }
 
   <div class="mb-3">
-    <label class="form-label font-weight-bold">Description</label>
+    <label class="form-label fw-bold">Description</label>
     <InputTextArea @bind-Value="TicketModel.Description" class="form-control" rows="5" placeholder="Detailed explanation of the issue" />
     <ValidationMessage For="@(() => TicketModel.Description)" class="text-danger small" />
   </div>
@@ -65,45 +70,29 @@
 </EditForm>
 
 @code {
-  [Parameter, EditorRequired]
-  public Ticket TicketModel { get; set; } = null!;
-
-  [Parameter]
-  public string SubmitButtonText { get; set; } = "Save Ticket";
-
-  [Parameter]
-  public EventCallback<Ticket> OnValidSubmit { get; set; }
+  [Parameter, EditorRequired] public Ticket TicketModel { get; set; } = null!;
+  [Parameter] public bool IsCreateMode { get; set; }
+  [Parameter] public bool CanEditStatus { get; set; } = true;
+  [Parameter] public string SubmitButtonText { get; set; } = "Save Ticket";
+  [Parameter] public EventCallback<Ticket> OnValidSubmit { get; set; }
   private IJSObjectReference? module;
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (!firstRender)
-    {
-      return;
-    }
-
-    module = await JS.InvokeAsync<IJSObjectReference>(
-        "import",
-        "./js/ticket-form.js");
-
-    await module.InvokeVoidAsync(
-        "focusElement",
-        "ticket-title");
+    if (!firstRender) return;
+    module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/ticket-form.js");
+    await module.InvokeVoidAsync("focusElement", "ticket-title");
   }
 
   private async Task HandleValidSubmit()
   {
     if (OnValidSubmit.HasDelegate)
-    {
       await OnValidSubmit.InvokeAsync(TicketModel);
-    }
   }
 
   public async ValueTask DisposeAsync()
   {
     if (module is not null)
-    {
       await module.DisposeAsync();
-    }
   }
 }

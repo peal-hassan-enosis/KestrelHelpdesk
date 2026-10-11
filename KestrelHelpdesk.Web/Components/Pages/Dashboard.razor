@@ -1,13 +1,14 @@
 ﻿@page "/dashboard"
-
+@using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
-
+@using Microsoft.AspNetCore.Authorization
 @inject ITicketService TicketService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
+@attribute [Authorize]
 @implements IAsyncDisposable
-
 @rendermode InteractiveServer
 
 <PageTitle>Dashboard - Kestrel Helpdesk</PageTitle>
@@ -15,74 +16,71 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2>Helpdesk Dashboard</h2>
-    <p class="text-muted mb-0">
-      Ticket overview by status
-    </p>
+    <p class="text-muted mb-0">Ticket overview by status</p>
   </div>
 </div>
+
+@if (isAgent)
+{
+  <div class="btn-group mb-3" role="group">
+    <button class="btn @(activeScope == TicketScope.AgentAssigned ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetScope(TicketScope.AgentAssigned)">Assigned</button>
+    <button class="btn @(activeScope == TicketScope.AgentCreated ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetScope(TicketScope.AgentCreated)">Created by Me</button>
+  </div>
+}
 
 <div class="card shadow-sm border-0">
   <div class="card-body">
     <h5 class="card-title">Tickets by Status</h5>
-
-    <div style="height: 400px;">
-      <canvas id="ticketStatusChart"></canvas>
-    </div>
+    <div style="height: 400px;"><canvas id="ticketStatusChart"></canvas></div>
   </div>
 </div>
 
 @code {
   private IJSObjectReference? module;
-
   private Dictionary<TicketStatus, int> statusCounts = new();
-
   private bool chartInitialized;
+  private bool isAgent;
+  private TicketScope activeScope = TicketScope.EmployeeOwn;
 
   protected override async Task OnInitializedAsync()
   {
-    statusCounts = await TicketService.GetTicketStatusCountsAsync();
+    var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+    isAgent = user.IsInRole(AppRoles.Agent);
+    activeScope = user.IsInRole(AppRoles.Manager)
+      ? TicketScope.ManagerAll
+      : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
+    await LoadCountsAsync();
+  }
+
+  private async Task LoadCountsAsync()
+  {
+    statusCounts = await TicketService.GetTicketStatusCountsAsync(activeScope);
+  }
+
+  private async Task SetScope(TicketScope scope)
+  {
+    activeScope = scope;
+    await LoadCountsAsync();
+    chartInitialized = false;
+    StateHasChanged();
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (chartInitialized)
-    {
-      return;
-    }
-
-    module ??= await JS.InvokeAsync<IJSObjectReference>(
-        "import",
-        "./js/dashboard.js");
-
-    var labels = new[]
-    {
-        "Open",
-        "In Progress",
-        "Resolved"
-    };
-
-    var values = new[]
-    {
-        GetCount(TicketStatus.Open),
-        GetCount(TicketStatus.InProgress),
-        GetCount(TicketStatus.Resolved)
-    };
+    if (chartInitialized) return;
+    module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/dashboard.js");
+    if (!firstRender) await module.InvokeVoidAsync("destroyChart");
 
     await module.InvokeVoidAsync(
-        "createStatusChart",
-        "ticketStatusChart",
-        labels,
-        values);
+      "createStatusChart",
+      "ticketStatusChart",
+      new[] { "Open", "In Progress", "Resolved" },
+      new[] { GetCount(TicketStatus.Open), GetCount(TicketStatus.InProgress), GetCount(TicketStatus.Resolved) });
 
     chartInitialized = true;
   }
 
-  private int GetCount(TicketStatus status)
-  {
-    return statusCounts.TryGetValue(status, out var count)
-        ? count
-        : 0;
-  }
+  private int GetCount(TicketStatus status) => statusCounts.TryGetValue(status, out var count) ? count : 0;
 
   public async ValueTask DisposeAsync()
   {
@@ -93,10 +91,7 @@
         await module.InvokeVoidAsync("destroyChart");
         await module.DisposeAsync();
       }
-      catch (JSDisconnectedException)
-      {
-        // The circuit may already be disconnected.
-      }
+      catch (JSDisconnectedException) { }
     }
   }
 }

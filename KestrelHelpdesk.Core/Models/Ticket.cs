@@ -27,7 +27,11 @@ public class Ticket
 
     public List<Comment> Comments { get; set; } = new();
 
-    // --- NEW PROPERTIES ---
+    // Identity user id of the creator.
     public string CreatedBy { get; set; } = string.Empty;
+
+    // Identity user id of the assigned agent, or null when unassigned.
+    public string? AssignedToUserId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -1,17 +1,41 @@
 ﻿@page "/tickets"
-@using KestrelHelpdesk.Core.Models
+@using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
-@using KestrelHelpdesk.Web.Components.UI
+@using KestrelHelpdesk.Core.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject ITicketService TicketService
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@attribute [Authorize]
+@rendermode InteractiveServer
 
 <PageTitle>Tickets - Kestrel Helpdesk</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Ticket Board</h3>
-  <a href="/tickets/new" class="btn btn-primary">Create Ticket</a>
+  <AuthorizeView Roles="Employee, Agent, Manager">
+    <a href="/tickets/new" class="btn btn-primary">Create Ticket</a>
+  </AuthorizeView>
 </div>
+
+@if (isAgent)
+{
+  <div class="btn-group mb-3" role="group">
+    <button class="btn @(activeScope == TicketScope.AgentAssigned ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetScope(TicketScope.AgentAssigned)">Assigned</button>
+    <button class="btn @(activeScope == TicketScope.AgentCreated ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetScope(TicketScope.AgentCreated)">Created by Me</button>
+  </div>
+}
+
+@if (isManager)
+{
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="notAssigned" @bind="notAssignedOnly" @bind:after="RefreshGrid" />
+    <label class="form-check-label" for="notAssigned">Not Assigned (Open only)</label>
+  </div>
+}
 
 <div class="row mb-3">
   <div class="col-md-4">
@@ -28,62 +52,99 @@
   <QuickGrid @ref="grid" ItemsProvider="@ticketProvider" Pagination="@pagination" Class="table table-hover align-middle" Theme="bootstrap">
     <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
     <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
-
-    <TemplateColumn Title="Status" Sortable="true">
-      <StatusBadge Status="@context.Status" />
-    </TemplateColumn>
-
-    <TemplateColumn Title="Priority" Sortable="true">
-      <PriorityBadge Priority="@context.Priority" />
-    </TemplateColumn>
-
+    <TemplateColumn Title="Status" Sortable="true"><StatusBadge Status="@context.Status" /></TemplateColumn>
+    <TemplateColumn Title="Priority" Sortable="true"><PriorityBadge Priority="@context.Priority" /></TemplateColumn>
+    <TemplateColumn Title="Assigned To">@GetAssigneeName(context.AssignedToUserId)</TemplateColumn>
     <PropertyColumn Property="@(t => t.CreatedAt.ToLocalTime())" Title="Created" Sortable="true" Format="g" />
-
+    <TemplateColumn Title="Assignment">
+      <AuthorizeView Roles="Manager">
+        <select class="form-select form-select-sm" value="@context.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(context.Id, e)">
+          <option value="">Unassigned</option>
+          @foreach (var agent in agents)
+          {
+            <option value="@agent.Id">@agent.DisplayName</option>
+          }
+        </select>
+      </AuthorizeView>
+      <AuthorizeView Roles="Agent">
+        @if (activeScope == TicketScope.AgentCreated)
+        {
+          @if (context.AssignedToUserId == currentUserId)
+          {
+            <button class="btn btn-sm btn-outline-secondary" @onclick="() => AssignToMe(context.Id, null)">Unassign from Me</button>
+          }
+          else
+          {
+            <button class="btn btn-sm btn-outline-primary" @onclick="() => AssignToMe(context.Id, currentUserId)">Assign to Me</button>
+          }
+        }
+      </AuthorizeView>
+    </TemplateColumn>
     <TemplateColumn Title="Actions">
       <a href="/tickets/@context.Id" class="btn btn-sm btn-outline-primary">View</a>
+      <a href="/tickets/@context.Id/edit" class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
     </TemplateColumn>
   </QuickGrid>
 </div>
 
-<div class="mt-3">
-  <Paginator State="@pagination" />
-</div>
+<div class="mt-3"><Paginator State="@pagination" /></div>
 
 @code {
-  [SupplyParameterFromQuery(Name = "status")]
-  public string? StatusQuery { get; set; }
-
+  [SupplyParameterFromQuery(Name = "status")] public string? StatusQuery { get; set; }
   private PaginationState pagination = new() { ItemsPerPage = 10 };
   private GridItemsProvider<Ticket>? ticketProvider;
-
   private QuickGrid<Ticket>? grid;
+  private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
+  private TicketScope activeScope = TicketScope.EmployeeOwn;
+  private bool isAgent;
+  private bool isManager;
+  private bool notAssignedOnly;
+  private string? currentUserId;
 
-  protected override void OnInitialized()
+  protected override async Task OnInitializedAsync()
   {
-    ticketProvider = async req => await TicketService.GetPagedTicketsAsync(req, StatusQuery);
+    var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+    isAgent = user.IsInRole(AppRoles.Agent);
+    isManager = user.IsInRole(AppRoles.Manager);
+    currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    activeScope = isManager ? TicketScope.ManagerAll : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
+    agents = await TicketService.GetAgentsAsync();
+    ticketProvider = async req => await TicketService.GetPagedTicketsAsync(req, StatusQuery, activeScope, notAssignedOnly);
   }
 
-  protected override async Task OnParametersSetAsync()
+  private async Task SetScope(TicketScope scope)
   {
-    if (grid != null)
-    {
-      await grid.RefreshDataAsync();
-    }
+    activeScope = scope;
+    await RefreshGrid();
+  }
+
+  private async Task RefreshGrid()
+  {
+    if (grid is not null) await grid.RefreshDataAsync();
   }
 
   private void OnStatusChanged(ChangeEventArgs e)
   {
     var selectedValue = e.Value?.ToString();
-    var uri = string.IsNullOrEmpty(selectedValue)
-        ? "/tickets"
-        : $"/tickets?status={selectedValue}";
+    Nav.NavigateTo(string.IsNullOrEmpty(selectedValue) ? "/tickets" : $"/tickets?status={selectedValue}");
+  }
 
-    Nav.NavigateTo(uri);
+  private async Task ManagerAssignmentChanged(int ticketId, ChangeEventArgs e)
+  {
+    await TicketService.AssignTicketAsync(ticketId, e.Value?.ToString());
+    await RefreshGrid();
   }
+
+  private async Task AssignToMe(int ticketId, string? agentUserId)
+  {
+    await TicketService.AssignTicketAsync(ticketId, agentUserId);
+    await RefreshGrid();
+  }
+
+  private string GetAssigneeName(string? userId) =>
+    string.IsNullOrWhiteSpace(userId) ? "-" : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "Unknown agent";
 }
+
 <style>
-  /* Hides QuickGrid's auto-generated filler rows by checking if the ID column is empty */
-  .grid-container tbody tr:has(td:first-child:empty) {
-    display: none;
-  }
+  .grid-container tbody tr:has(td:first-child:empty) { display: none; }
 </style>

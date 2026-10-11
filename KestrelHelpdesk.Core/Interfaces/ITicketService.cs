@@ -1,16 +1,22 @@
 ﻿namespace KestrelHelpdesk.Core.Interfaces;
 
+using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Models;
 using Microsoft.AspNetCore.Components.QuickGrid;
 
 public interface ITicketService
 {
-    // Add <Ticket> to the request parameter
-    ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(GridItemsProviderRequest<Ticket> request, string? statusFilter);
+    ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(
+        GridItemsProviderRequest<Ticket> request,
+        string? statusFilter,
+        TicketScope scope,
+        bool notAssignedOnly = false);
 
     Task<Ticket?> GetTicketByIdAsync(int id);
     Task CreateTicketAsync(Ticket ticket);
     Task UpdateTicketAsync(Ticket ticket);
+    Task AssignTicketAsync(int ticketId, string? agentUserId);
     Task AddCommentAsync(int ticketId, Comment comment);
-    Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync();
+    Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync(TicketScope scope);
+    Task<IReadOnlyList<AssignableUser>> GetAgentsAsync();
 }

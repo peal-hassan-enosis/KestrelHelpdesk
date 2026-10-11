@@ -1,11 +1,13 @@
 ﻿@page "/tickets/{id:int}/edit"
-@using KestrelHelpdesk.Core.Models
 @using KestrelHelpdesk.Core.Interfaces
-@using KestrelHelpdesk.Web.State
+@using KestrelHelpdesk.Core.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject ITicketService TicketService
-@inject CurrentUserState UserState
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
+@attribute [Authorize]
 @rendermode InteractiveServer
 
 <PageTitle>Edit Ticket #@Id</PageTitle>
@@ -16,7 +18,7 @@
   {
     <div class="alert alert-danger">
       <h4>Ticket Not Found</h4>
-      <p>The requested ticket (#@Id) does not exist.</p>
+      <p>The requested ticket (#@Id) does not exist or you don't have access to it.</p>
       <a href="/tickets" class="btn btn-outline-secondary">Back to Ticket Board</a>
     </div>
   }
@@ -32,47 +34,53 @@ else
     <a href="/tickets/@ticketToEdit.Id" class="btn btn-outline-secondary btn-sm">Cancel</a>
   </div>
 
-  <!-- Reusable TicketForm Component for Editing -->
-  <TicketForm TicketModel="ticketToEdit" SubmitButtonText="Update Ticket" OnValidSubmit="UpdateTicket" />
+  <TicketForm TicketModel="ticketToEdit"
+              CanEditStatus="canEditStatus"
+              SubmitButtonText="Update Ticket"
+              OnValidSubmit="UpdateTicket" />
 }
 
 @code {
-  [Parameter]
-  public int Id { get; set; }
-
+  [Parameter] public int Id { get; set; }
   private Ticket? ticketToEdit;
-  private bool notFound = false;
+  private bool notFound;
+  private bool canEditStatus = true;
 
   protected override async Task OnInitializedAsync()
   {
-    var existingTicket = await TicketService.GetTicketByIdAsync(Id);
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    canEditStatus = !authState.User.IsInRole("Manager");
+    await LoadTicketAsync();
+  }
 
+  private async Task LoadTicketAsync()
+  {
+    var existingTicket = await TicketService.GetTicketByIdAsync(Id);
     if (existingTicket == null)
     {
       notFound = true;
+      return;
     }
-    else
+
+    ticketToEdit = new Ticket
     {
-      // Clone or copy to avoid modifying live service state before form submission
-      ticketToEdit = new Ticket
-      {
-        Id = existingTicket.Id,
-        Title = existingTicket.Title,
-        Description = existingTicket.Description,
-        Priority = existingTicket.Priority,
-        Status = existingTicket.Status,
-        Category = existingTicket.Category,
-        Comments = existingTicket.Comments
-      };
-    }
+      Id = existingTicket.Id,
+      Title = existingTicket.Title,
+      Description = existingTicket.Description,
+      Priority = existingTicket.Priority,
+      Status = existingTicket.Status,
+      Category = existingTicket.Category,
+      CreatedBy = existingTicket.CreatedBy,
+      AssignedToUserId = existingTicket.AssignedToUserId,
+      CreatedAt = existingTicket.CreatedAt,
+      Comments = existingTicket.Comments
+    };
   }
 
   private async Task UpdateTicket()
   {
-    if (ticketToEdit != null)
-    {
-      await TicketService.UpdateTicketAsync(ticketToEdit);
-      Nav.NavigateTo($"/tickets/{ticketToEdit.Id}");
-    }
+    if (ticketToEdit is null) return;
+    await TicketService.UpdateTicketAsync(ticketToEdit);
+    Nav.NavigateTo($"/tickets/{ticketToEdit.Id}");
   }
 }
