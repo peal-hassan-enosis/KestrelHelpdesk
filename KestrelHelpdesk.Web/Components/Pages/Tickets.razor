@@ -1,4 +1,4 @@
-@page "/tickets"
+﻿@page "/tickets"
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
@@ -52,8 +52,12 @@
   <QuickGrid @ref="grid" ItemsProvider="@ticketProvider" Pagination="@pagination" Class="table table-hover align-middle" Theme="bootstrap">
     <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
     <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
-    <TemplateColumn Title="Status" Sortable="true" Context="ticket"><StatusBadge Status="@ticket.Status" /></TemplateColumn>
-    <TemplateColumn Title="Priority" Sortable="true" Context="ticket"><PriorityBadge Priority="@ticket.Priority" /></TemplateColumn>
+    <TemplateColumn Title="Status" Sortable="true" Context="ticket">
+      <span class="badge @GetStatusBadgeClass(ticket.Status)">@GetStatusLabel(ticket.Status)</span>
+    </TemplateColumn>
+    <TemplateColumn Title="Priority" Sortable="true" Context="ticket">
+      <span class="badge @GetPriorityBadgeClass(ticket.Priority)">@ticket.Priority</span>
+    </TemplateColumn>
     <TemplateColumn Title="Assigned To" Context="ticket">@GetAssigneeName(ticket.AssignedToUserId)</TemplateColumn>
     <PropertyColumn Property="@(t => t.CreatedAt.ToLocalTime())" Title="Created" Sortable="true" Format="g" />
     <TemplateColumn Title="Assignment" Context="ticket">
@@ -143,6 +147,29 @@
 
   private string GetAssigneeName(string? userId) =>
     string.IsNullOrWhiteSpace(userId) ? "-" : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "Unknown agent";
+
+  private static string GetStatusBadgeClass(TicketStatus status) => status switch
+  {
+    TicketStatus.Open => "bg-primary",
+    TicketStatus.InProgress => "bg-warning text-dark",
+    TicketStatus.Resolved => "bg-success",
+    _ => "bg-secondary"
+  };
+
+  private static string GetStatusLabel(TicketStatus status) => status switch
+  {
+    TicketStatus.InProgress => "In Progress",
+    _ => status.ToString()
+  };
+
+  private static string GetPriorityBadgeClass(TicketPriority priority) => priority switch
+  {
+    TicketPriority.Low => "bg-info text-dark",
+    TicketPriority.Medium => "bg-secondary",
+    TicketPriority.High => "bg-warning text-dark",
+    TicketPriority.Critical => "bg-danger",
+    _ => "bg-light text-dark"
+  };
 }
 
 <style>
