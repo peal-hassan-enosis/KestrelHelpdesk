@@ -14,72 +14,84 @@
 
 <PageTitle>Ticket #@Id - Kestrel Helpdesk</PageTitle>
 
-@if (notFound)
-{
-  <div class="alert alert-danger shadow-sm">
-    <h4>Ticket Not Found</h4>
-    <p>The ticket you are looking for does not exist or you don't have access to it.</p>
-    <a href="/tickets" class="btn btn-primary">Back to Board</a>
-  </div>
-}
-else if (ticket == null)
-{
-  <p><em>Loading ticket details...</em></p>
-}
-else
-{
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>#@ticket.Id - @ticket.Title</h2>
-    <div>
-      <button class="btn btn-outline-primary me-2" @onclick="CopyTicketLink">Copy Link</button>
-      <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary me-2">Edit Ticket</a>
-      <a href="/tickets" class="btn btn-outline-secondary">Back to Board</a>
-    </div>
-  </div>
-
-  <div class="card mb-4 shadow-sm border-0">
-    <div class="card-body">
-      <p class="card-text fs-5">@ticket.Description</p>
-      <div class="mt-4 d-flex gap-2 flex-wrap">
-        <StatusBadge Status="@ticket.Status" />
-        <PriorityBadge Priority="@ticket.Priority" />
-        <span class="badge text-bg-light">Assigned To: @GetAssigneeName(ticket.AssignedToUserId)</span>
+<ErrorBoundary>
+  <ChildContent>
+    @if (notFound)
+    {
+      <div class="alert alert-danger shadow-sm">
+        <h4>Ticket Not Found</h4>
+        <p>The ticket you are looking for does not exist or you don't have access to it.</p>
+        <a href="/tickets" class="btn btn-primary">Back to Board</a>
       </div>
-      <small class="text-muted d-block mt-3">
-        Created: @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(ticket.CreatedAt) : "Loading local time...")
-      </small>
-    </div>
-  </div>
+    }
+    else if (ticket == null)
+    {
+      <p><em>Loading ticket details...</em></p>
+    }
+    else
+    {
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>#@ticket.Id - @ticket.Title</h2>
+        <div>
+          <button class="btn btn-outline-primary me-2" @onclick="CopyTicketLink">Copy Link</button>
+          <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary me-2">Edit Ticket</a>
+          <a href="/tickets" class="btn btn-outline-secondary">Back to Board</a>
+        </div>
+      </div>
 
-  <h4 class="mb-3">Comments (@ticket.Comments.Count)</h4>
-  @if (ticket.Comments.Any())
-  {
-    <div class="d-flex flex-column gap-3 mb-4">
-      @foreach (var comment in ticket.Comments.OrderBy(c => c.CreatedAt))
-      {
-        <div class="card shadow-sm border-0" @key="comment.Id">
-          <div class="card-body py-3">
-            <div class="d-flex w-100 justify-content-between align-items-center mb-2">
-              <h6 class="mb-0 fw-bold">@comment.Author</h6>
-              <small class="text-muted">
-                @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(comment.CreatedAt) : "Loading local time...")
-              </small>
-            </div>
-            <p class="mb-0">@comment.Text</p>
+      <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body">
+          <p class="card-text fs-5">@ticket.Description</p>
+          <div class="mt-4 d-flex gap-2 flex-wrap">
+            <StatusBadge Status="@ticket.Status" />
+            <PriorityBadge Priority="@ticket.Priority" />
+            <span class="badge text-bg-light">Assigned To: @GetAssigneeName(ticket.AssignedToUserId)</span>
           </div>
+          <small class="text-muted d-block mt-3">
+            Created: @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(ticket.CreatedAt) : "Loading local time...")
+          </small>
+        </div>
+      </div>
+
+      <h4 class="mb-3">Comments (@ticket.Comments.Count)</h4>
+      @if (ticket.Comments.Any())
+      {
+        <div class="d-flex flex-column gap-3 mb-4">
+          @foreach (var comment in ticket.Comments.OrderBy(c => c.CreatedAt))
+          {
+            <div class="card shadow-sm border-0" @key="comment.Id">
+              <div class="card-body py-3">
+                <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0 fw-bold">@comment.Author</h6>
+                  <small class="text-muted">
+                    @(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(comment.CreatedAt) : "Loading local time...")
+                  </small>
+                </div>
+                <p class="mb-0">@comment.Text</p>
+              </div>
+            </div>
+          }
         </div>
       }
-    </div>
-  }
 
-  <div class="card shadow-sm border-0 bg-light">
-    <div class="card-body">
-      <h5 class="card-title">Add a Comment</h5>
-      <textarea class="form-control mb-3" rows="3" placeholder="Write a response..." @bind="newComment.Text" @bind:event="oninput"></textarea>
-      <button class="btn btn-primary" @onclick="PostComment" disabled="@string.IsNullOrWhiteSpace(newComment.Text)">Post Comment</button>
+      <div class="card shadow-sm border-0 bg-light">
+        <div class="card-body">
+          <h5 class="card-title">Add a Comment</h5>
+          <textarea class="form-control mb-3" rows="3" placeholder="Write a response..." @bind="newComment.Text" @bind:event="oninput"></textarea>
+          <button class="btn btn-primary" @onclick="PostComment" disabled="@string.IsNullOrWhiteSpace(newComment.Text)">Post Comment</button>
+        </div>
+      </div>
+    }
+  </ChildContent>
+  <ErrorContent Context="exception">
+    <div class="alert alert-danger shadow-sm" role="alert">
+      <h4 class="alert-heading">Something went wrong</h4>
+      <p class="mb-0">We couldn't display this ticket right now. Please try again or return to the ticket board.</p>
+      <hr />
+      <a href="/tickets" class="btn btn-primary">Back to Board</a>
     </div>
-  </div>
-}
+  </ErrorContent>
+</ErrorBoundary>
 
 @code {
   [Parameter] public int Id { get; set; }
