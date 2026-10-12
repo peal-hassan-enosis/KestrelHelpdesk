@@ -9,6 +9,7 @@ public interface ITicketService
     ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(
         GridItemsProviderRequest<Ticket> request,
         string? statusFilter,
+        string? searchTerm,
         TicketScope scope,
         bool notAssignedOnly = false);
 
