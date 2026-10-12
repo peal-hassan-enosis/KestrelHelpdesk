@@ -13,6 +13,16 @@ public interface ITicketService
         TicketScope scope,
         bool notAssignedOnly = false);
 
+    Task<(IReadOnlyList<Ticket> Items, int TotalCount)> GetTicketGridDataAsync(
+        int page,
+        int pageSize,
+        string? statusFilter,
+        string? searchTerm,
+        TicketScope scope,
+        bool notAssignedOnly = false,
+        string? sortBy = null,
+        bool sortDescending = false);
+
     Task<Ticket?> GetTicketByIdAsync(int id);
     Task CreateTicketAsync(Ticket ticket);
     Task UpdateTicketAsync(Ticket ticket);
