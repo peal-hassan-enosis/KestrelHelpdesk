@@ -71,10 +71,6 @@
   <QuickGrid @ref="grid"
              ItemsProvider="@ticketProvider"
              Pagination="pagination"
-             Virtualize="true"
-             ItemSize="72"
-             OverscanCount="5"
-             ItemKey="@(ticket => ticket.Id)"
              Class="table table-hover align-middle"
              Theme="bootstrap">
     <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
@@ -128,7 +124,7 @@
   [SupplyParameterFromQuery(Name = "status")] public string? StatusQuery { get; set; }
   private GridItemsProvider<Ticket>? ticketProvider;
   private QuickGrid<Ticket>? grid;
-  private PaginationState pagination = new() { ItemsPerPage = 50 };
+  private PaginationState pagination = new() { ItemsPerPage = 15 };
   private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
   private TicketScope activeScope = TicketScope.EmployeeOwn;
   private bool isAgent;
@@ -261,12 +257,7 @@
 }
 
 <style>
-  .grid-container tbody tr {
-    height: 72px;
-  }
-
   .grid-container tbody td {
-    height: 72px;
     vertical-align: middle;
     white-space: nowrap;
     overflow: hidden;
@@ -275,9 +266,5 @@
   .grid-container tbody td:nth-child(2) {
     max-width: 240px;
     text-overflow: ellipsis;
-  }
-
-  .grid-container tbody tr:has(td:first-child:empty) {
-    display: none;
   }
 </style>
