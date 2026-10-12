@@ -31,7 +31,7 @@
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting()
-            ? InteractiveServer
+            ? new InteractiveServerRenderMode(prerender: false)
             : null;
 }
 </html>
