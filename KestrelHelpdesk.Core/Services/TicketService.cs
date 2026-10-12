@@ -48,6 +48,33 @@ public class TicketService : ITicketService
         return GridItemsProviderResult.From(items, totalCount);
     }
 
+    public async Task<(IReadOnlyList<Ticket> Items, int TotalCount)> GetTicketGridDataAsync(
+        int page,
+        int pageSize,
+        string? statusFilter,
+        string? searchTerm,
+        TicketScope scope,
+        bool notAssignedOnly = false,
+        string? sortBy = null,
+        bool sortDescending = false)
+    {
+        var user = await RequireUserAsync();
+        var effectiveScope = GetEffectiveScope(user, scope);
+        var startIndex = Math.Max(0, page) * Math.Max(1, pageSize);
+        var (items, totalCount) = await _repository.GetPagedTicketsAsync(
+            startIndex,
+            pageSize,
+            statusFilter,
+            searchTerm,
+            NormalizeSortColumn(sortBy),
+            !sortDescending,
+            effectiveScope,
+            user.UserId,
+            notAssignedOnly);
+
+        return (items, totalCount);
+    }
+
     public async Task<Ticket?> GetTicketByIdAsync(int id)
     {
         var user = await RequireUserAsync();
@@ -136,6 +163,16 @@ public class TicketService : ITicketService
         if (user.IsInRole(AppRoles.Employee)) return TicketScope.EmployeeOwn;
         return requested == TicketScope.AgentCreated ? TicketScope.AgentCreated : TicketScope.AgentAssigned;
     }
+
+    private static string? NormalizeSortColumn(string? sortBy) => sortBy switch
+    {
+        "Id" => "Id",
+        "Title" => "Title",
+        "Status" => "Status",
+        "Priority" => "Priority",
+        "CreatedAt" => "CreatedAt",
+        _ => null
+    };
 
     private static bool CanView(CurrentUserInfo user, Ticket ticket) => user.IsInRole(AppRoles.Manager) || ticket.CreatedBy == user.UserId || (user.IsInRole(AppRoles.Agent) && ticket.AssignedToUserId == user.UserId);
     private static bool CanEdit(CurrentUserInfo user, Ticket ticket) => CanView(user, ticket);
