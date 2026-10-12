@@ -42,7 +42,21 @@
   </div>
 }
 
-<div class="row mb-3">
+<div class="row mb-3 g-2">
+  <div class="col-md-5">
+    <div class="input-group">
+      <input class="form-control"
+             type="search"
+             placeholder="Search tickets by title or description..."
+             value="@searchText"
+             @oninput="OnSearchInput" />
+      @if (!string.IsNullOrWhiteSpace(searchText))
+      {
+        <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">Clear</button>
+      }
+    </div>
+    <small class="text-muted">Search starts 300 ms after you stop typing.</small>
+  </div>
   <div class="col-md-4">
     <select class="form-select" value="@StatusQuery" @onchange="OnStatusChanged">
       <option value="">All Statuses</option>
@@ -114,6 +128,9 @@
   private bool isManager;
   private bool notAssignedOnly;
   private string? currentUserId;
+  private string searchText = string.Empty;
+  private string searchTerm = string.Empty;
+  private CancellationTokenSource? searchDebounceCts;
 
   protected override async Task OnInitializedAsync()
   {
@@ -125,7 +142,7 @@
     currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     activeScope = isManager ? TicketScope.ManagerAll : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
     agents = await TicketService.GetAgentsAsync();
-    ticketProvider = async req => await TicketService.GetPagedTicketsAsync(req, StatusQuery, activeScope, notAssignedOnly);
+    ticketProvider = async req => await TicketService.GetPagedTicketsAsync(req, StatusQuery, searchTerm, activeScope, notAssignedOnly);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -158,6 +175,35 @@
   private async Task OnStatusChanged(ChangeEventArgs e)
   {
     StatusQuery = e.Value?.ToString();
+    await RefreshGrid();
+  }
+
+  private async Task OnSearchInput(ChangeEventArgs e)
+  {
+    searchText = e.Value?.ToString() ?? string.Empty;
+
+    searchDebounceCts?.Cancel();
+    searchDebounceCts?.Dispose();
+    searchDebounceCts = new CancellationTokenSource();
+    var token = searchDebounceCts.Token;
+
+    try
+    {
+      await Task.Delay(300, token);
+      searchTerm = searchText.Trim();
+      await RefreshGrid();
+    }
+    catch (OperationCanceledException)
+    {
+      // A newer keystroke replaced this pending search.
+    }
+  }
+
+  private async Task ClearSearch()
+  {
+    searchDebounceCts?.Cancel();
+    searchText = string.Empty;
+    searchTerm = string.Empty;
     await RefreshGrid();
   }
 
@@ -201,6 +247,8 @@
 
   public void Dispose()
   {
+    searchDebounceCts?.Cancel();
+    searchDebounceCts?.Dispose();
     TicketEvents.TicketChanged -= OnTicketChangedAsync;
   }
 }
