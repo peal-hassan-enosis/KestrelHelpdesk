@@ -102,7 +102,7 @@
 
 @code {
   [SupplyParameterFromQuery(Name = "status")] public string? StatusQuery { get; set; }
-  private PaginationState pagination = new() { ItemsPerPage = 10 };
+  private PaginationState pagination = new() { ItemsPerPage = 50 };
   private GridItemsProvider<Ticket>? ticketProvider;
   private QuickGrid<Ticket>? grid;
   private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
