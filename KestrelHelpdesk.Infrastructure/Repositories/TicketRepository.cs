@@ -13,8 +13,8 @@ public class TicketRepository : ITicketRepository
     public TicketRepository(IDbContextFactory<ApplicationDbContext> factory) => _factory = factory;
 
     public async Task<(List<Ticket> Items, int TotalCount)> GetPagedTicketsAsync(
-        int startIndex, int? count, string? statusFilter, string? sortByColumn,
-        bool sortByAscending, TicketScope scope, string userId, bool notAssignedOnly)
+        int startIndex, int? count, string? statusFilter, string? searchTerm,
+        string? sortByColumn, bool sortByAscending, TicketScope scope, string userId, bool notAssignedOnly)
     {
         using var context = await _factory.CreateDbContextAsync();
         var query = context.Tickets.AsNoTracking();
@@ -27,8 +27,14 @@ public class TicketRepository : ITicketRepository
             _ => query.Where(t => false)
         };
 
-        if (!string.IsNullOrEmpty(statusFilter) && Enum.TryParse<TicketStatus>(statusFilter, true, out var parsedStatus))
+        if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<TicketStatus>(statusFilter, true, out var parsedStatus))
             query = query.Where(t => t.Status == parsedStatus);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var pattern = $"%{searchTerm.Trim()}%";
+            query = query.Where(t => EF.Functions.Like(t.Title, pattern) || EF.Functions.Like(t.Description, pattern));
+        }
 
         if (notAssignedOnly)
             query = query.Where(t => t.Status == TicketStatus.Open && t.AssignedToUserId == null);
@@ -43,7 +49,7 @@ public class TicketRepository : ITicketRepository
             _ => sortByAscending ? query.OrderBy(t => t.CreatedAt) : query.OrderByDescending(t => t.CreatedAt)
         };
 
-        var items = await query.Skip(startIndex).Take(count ?? 10).ToListAsync();
+        var items = await query.Skip(startIndex).Take(count ?? 50).ToListAsync();
         return (items, totalCount);
     }
 
