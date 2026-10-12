@@ -1,5 +1,6 @@
 ﻿@page "/tickets"
 @using KestrelHelpdesk.Core.Authorization
+@using KestrelHelpdesk.Core.Events
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
 @using KestrelHelpdesk.Web.Services
@@ -7,12 +8,14 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject ITicketService TicketService
+@inject ITicketEventService TicketEvents
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject BrowserTimeZoneService BrowserTimeZone
 
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IDisposable
 
 <PageTitle>Tickets - Kestrel Helpdesk</PageTitle>
 
@@ -111,6 +114,8 @@
 
   protected override async Task OnInitializedAsync()
   {
+    TicketEvents.TicketChanged += OnTicketChangedAsync;
+
     var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
     isAgent = user.IsInRole(AppRoles.Agent);
     isManager = user.IsInRole(AppRoles.Manager);
@@ -129,6 +134,11 @@
 
     await BrowserTimeZone.InitializeAsync();
     await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task OnTicketChangedAsync(TicketChangedEventArgs eventArgs)
+  {
+    await InvokeAsync(RefreshGrid);
   }
 
   private async Task SetScope(TicketScope scope)
@@ -185,6 +195,11 @@
     TicketPriority.Critical => "bg-danger",
     _ => "bg-light text-dark"
   };
+
+  public void Dispose()
+  {
+    TicketEvents.TicketChanged -= OnTicketChangedAsync;
+  }
 }
 
 <style>

@@ -1,16 +1,19 @@
 ﻿@page "/tickets/{Id:int}"
 @using KestrelHelpdesk.Core.Authorization
+@using KestrelHelpdesk.Core.Events
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
 @using KestrelHelpdesk.Web.Services
 @using Microsoft.AspNetCore.Authorization
 @inject ITicketService TicketService
+@inject ITicketEventService TicketEvents
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
 @inject BrowserTimeZoneService BrowserTimeZone
 
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IDisposable
 
 <PageTitle>Ticket #@Id - Kestrel Helpdesk</PageTitle>
 
@@ -102,6 +105,7 @@
 
   protected override async Task OnInitializedAsync()
   {
+    TicketEvents.TicketChanged += OnTicketChangedAsync;
     agents = await TicketService.GetAgentsAsync();
     await LoadTicketAsync();
   }
@@ -122,6 +126,12 @@
     await InvokeAsync(StateHasChanged);
   }
 
+  private async Task OnTicketChangedAsync(TicketChangedEventArgs eventArgs)
+  {
+    if (eventArgs.TicketId != Id) return;
+    await InvokeAsync(LoadTicketAsync);
+  }
+
   private async Task LoadTicketAsync()
   {
     ticket = await TicketService.GetTicketByIdAsync(Id);
@@ -140,4 +150,9 @@
   }
 
   private Task CopyTicketLink() => JS.InvokeVoidAsync("navigator.clipboard.writeText", NavigationManager.Uri).AsTask();
+
+  public void Dispose()
+  {
+    TicketEvents.TicketChanged -= OnTicketChangedAsync;
+  }
 }

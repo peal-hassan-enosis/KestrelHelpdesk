@@ -1,4 +1,5 @@
-﻿using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Events;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
 using Microsoft.AspNetCore.Components.QuickGrid;
@@ -10,12 +11,18 @@ public class TicketService : ITicketService
     private readonly ITicketRepository _repository;
     private readonly ICurrentUserContext _currentUser;
     private readonly IUserDirectory _userDirectory;
+    private readonly ITicketEventService _ticketEvents;
 
-    public TicketService(ITicketRepository repository, ICurrentUserContext currentUser, IUserDirectory userDirectory)
+    public TicketService(
+        ITicketRepository repository,
+        ICurrentUserContext currentUser,
+        IUserDirectory userDirectory,
+        ITicketEventService ticketEvents)
     {
         _repository = repository;
         _currentUser = currentUser;
         _userDirectory = userDirectory;
+        _ticketEvents = ticketEvents;
     }
 
     public async ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(GridItemsProviderRequest<Ticket> request, string? statusFilter, TicketScope scope, bool notAssignedOnly = false)
@@ -48,11 +55,20 @@ public class TicketService : ITicketService
         var user = await RequireUserAsync();
         var existing = await _repository.GetTicketByIdAsync(ticket.Id) ?? throw new KeyNotFoundException($"Ticket {ticket.Id} was not found.");
         if (!CanEdit(user, existing)) throw new UnauthorizedAccessException("You are not allowed to edit this ticket.");
+
+        var statusChanged = existing.Status != ticket.Status;
         if (user.IsInRole(AppRoles.Manager)) ticket.Status = existing.Status;
+
         ticket.CreatedBy = existing.CreatedBy;
         ticket.AssignedToUserId = existing.AssignedToUserId;
         ticket.CreatedAt = existing.CreatedAt;
         await _repository.UpdateTicketAsync(ticket);
+
+        if (user.IsInRole(AppRoles.Agent) && statusChanged)
+        {
+            await _ticketEvents.PublishTicketChangedAsync(
+                new TicketChangedEventArgs(ticket.Id, TicketChangeType.StatusChanged));
+        }
     }
 
     public async Task AssignTicketAsync(int ticketId, string? agentUserId)
