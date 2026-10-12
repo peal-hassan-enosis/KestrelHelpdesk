@@ -70,6 +70,7 @@
 <div class="grid-container border rounded shadow-sm bg-white p-3">
   <QuickGrid @ref="grid"
              ItemsProvider="@ticketProvider"
+             Pagination="pagination"
              Virtualize="true"
              ItemSize="72"
              OverscanCount="5"
@@ -117,12 +118,17 @@
       <a href="/tickets/@ticket.Id/edit" class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
     </TemplateColumn>
   </QuickGrid>
+
+  <div class="mt-3 d-flex justify-content-center">
+    <Paginator State="pagination" />
+  </div>
 </div>
 
 @code {
   [SupplyParameterFromQuery(Name = "status")] public string? StatusQuery { get; set; }
   private GridItemsProvider<Ticket>? ticketProvider;
   private QuickGrid<Ticket>? grid;
+  private PaginationState pagination = new() { ItemsPerPage = 50 };
   private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
   private TicketScope activeScope = TicketScope.EmployeeOwn;
   private bool isAgent;
