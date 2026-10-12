@@ -1,6 +1,7 @@
 using Bunit;
 using KestrelHelpdesk.Core.Models;
 using KestrelHelpdesk.Web.Components.Pages;
+using Microsoft.AspNetCore.Components;
 using Xunit;
 
 namespace KestrelHelpdesk.Tests.Components;
