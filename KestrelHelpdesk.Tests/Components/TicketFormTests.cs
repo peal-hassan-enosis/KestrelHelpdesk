@@ -44,6 +44,6 @@ public class TicketFormTests : BunitContext
     private void ConfigureJsInterop()
     {
         var module = JSInterop.SetupModule("./js/ticket-form.js");
-        module.SetupVoid("focusElement");
+        module.SetupVoid("focusElement", _ => true);
     }
 }
