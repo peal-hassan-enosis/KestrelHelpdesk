@@ -71,8 +71,9 @@
   <QuickGrid @ref="grid"
              ItemsProvider="@ticketProvider"
              Virtualize="true"
-             ItemSize="48"
-             OverscanCount="3"
+             ItemSize="72"
+             OverscanCount="5"
+             ItemKey="@(ticket => ticket.Id)"
              Class="table table-hover align-middle"
              Theme="bootstrap">
     <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
@@ -254,5 +255,23 @@
 }
 
 <style>
-  .grid-container tbody tr:has(td:first-child:empty) { display: none; }
+  .grid-container tbody tr {
+    height: 72px;
+  }
+
+  .grid-container tbody td {
+    height: 72px;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .grid-container tbody td:nth-child(2) {
+    max-width: 240px;
+    text-overflow: ellipsis;
+  }
+
+  .grid-container tbody tr:has(td:first-child:empty) {
+    display: none;
+  }
 </style>
