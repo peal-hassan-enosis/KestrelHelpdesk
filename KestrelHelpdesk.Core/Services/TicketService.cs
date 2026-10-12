@@ -25,11 +25,26 @@ public class TicketService : ITicketService
         _ticketEvents = ticketEvents;
     }
 
-    public async ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(GridItemsProviderRequest<Ticket> request, string? statusFilter, TicketScope scope, bool notAssignedOnly = false)
+    public async ValueTask<GridItemsProviderResult<Ticket>> GetPagedTicketsAsync(
+        GridItemsProviderRequest<Ticket> request,
+        string? statusFilter,
+        string? searchTerm,
+        TicketScope scope,
+        bool notAssignedOnly = false)
     {
         var user = await RequireUserAsync();
         var effectiveScope = GetEffectiveScope(user, scope);
-        var (items, totalCount) = await _repository.GetPagedTicketsAsync(request.StartIndex, request.Count, statusFilter, request.SortByColumn?.Title, request.SortByAscending, effectiveScope, user.UserId, notAssignedOnly);
+        var (items, totalCount) = await _repository.GetPagedTicketsAsync(
+            request.StartIndex,
+            request.Count,
+            statusFilter,
+            searchTerm,
+            request.SortByColumn?.Title,
+            request.SortByAscending,
+            effectiveScope,
+            user.UserId,
+            notAssignedOnly);
+
         return GridItemsProviderResult.From(items, totalCount);
     }
 
