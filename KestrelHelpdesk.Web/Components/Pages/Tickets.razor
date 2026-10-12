@@ -54,7 +54,13 @@
 </div>
 
 <div class="grid-container border rounded shadow-sm bg-white p-3">
-  <QuickGrid @ref="grid" ItemsProvider="@ticketProvider" Pagination="@pagination" Class="table table-hover align-middle" Theme="bootstrap">
+  <QuickGrid @ref="grid"
+             ItemsProvider="@ticketProvider"
+             Virtualize="true"
+             ItemSize="48"
+             OverscanCount="3"
+             Class="table table-hover align-middle"
+             Theme="bootstrap">
     <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
     <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
     <TemplateColumn Title="Status" Sortable="true" Context="ticket">
@@ -98,11 +104,8 @@
   </QuickGrid>
 </div>
 
-<div class="mt-3"><Paginator State="@pagination" /></div>
-
 @code {
   [SupplyParameterFromQuery(Name = "status")] public string? StatusQuery { get; set; }
-  private PaginationState pagination = new() { ItemsPerPage = 50 };
   private GridItemsProvider<Ticket>? ticketProvider;
   private QuickGrid<Ticket>? grid;
   private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
