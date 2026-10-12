@@ -77,6 +77,8 @@ SELECT
     DATEADD(MINUTE, -Number, SYSUTCDATETIME())
 FROM Numbers;
 
+DECLARE @TotalCount int = (SELECT COUNT(*) FROM Tickets);
+
 PRINT CONCAT('Inserted ', @RowsToInsert, ' performance test tickets.');
-PRINT CONCAT('Total tickets: ', (SELECT COUNT(*) FROM Tickets));
+PRINT CONCAT('Total tickets: ', @TotalCount);
 GO
