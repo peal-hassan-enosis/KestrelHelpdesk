@@ -34,7 +34,7 @@ public class TicketFormTests : BunitContext
         cut.Find("form").Submit();
 
         // Assert
-        var validationSummary = cut.Find("div.alert-danger").TextContent;
+        var validationSummary = cut.Find("ul.alert-danger").TextContent;
         Assert.Contains("Title is required.", validationSummary);
         Assert.Contains("Description is required.", validationSummary);
         Assert.Contains("Category is required.", validationSummary);
