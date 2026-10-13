@@ -3,6 +3,7 @@ using KestrelHelpdesk.Core.Events;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
 using Microsoft.AspNetCore.Components.QuickGrid;
+using System.ComponentModel.DataAnnotations;
 
 namespace KestrelHelpdesk.Core.Services;
 
@@ -85,6 +86,10 @@ public class TicketService : ITicketService
     public async Task CreateTicketAsync(Ticket ticket)
     {
         var user = await RequireUserAsync();
+        var validationErrors = ValidateTicket(ticket);
+        if (validationErrors.Count > 0)
+            throw new ValidationException(string.Join(" ", validationErrors));
+
         ticket.CreatedBy = user.UserId;
         ticket.Status = TicketStatus.Open;
         ticket.AssignedToUserId = null;
@@ -100,6 +105,10 @@ public class TicketService : ITicketService
 
         var statusChanged = existing.Status != ticket.Status;
         if (user.IsInRole(AppRoles.Manager)) ticket.Status = existing.Status;
+
+        var validationErrors = ValidateTicket(ticket);
+        if (validationErrors.Count > 0)
+            throw new ValidationException(string.Join(" ", validationErrors));
 
         ticket.CreatedBy = existing.CreatedBy;
         ticket.AssignedToUserId = existing.AssignedToUserId;
@@ -165,6 +174,24 @@ public class TicketService : ITicketService
         var agents = await _userDirectory.GetAgentsAsync();
         var agentByEmail = agents.ToDictionary(a => a.Email, StringComparer.OrdinalIgnoreCase);
 
+        foreach (var row in rows)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var ticket = new Ticket
+            {
+                Title = row.Title,
+                Description = row.Description,
+                Priority = row.Priority,
+                Category = row.Category,
+                Status = TicketStatus.Open,
+                CreatedBy = user.UserId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            foreach (var validationError in ValidateTicket(ticket))
+                errors.Add($"Row {row.ExcelRowNumber}: {validationError}");
+        }
+
         if (!user.IsInRole(AppRoles.Manager) && !ignoreAssignments && rows.Any(r => !string.IsNullOrWhiteSpace(r.AssignedToEmail)))
             errors.Add("The Excel file contains ticket assignments, but your role is not authorized to assign tickets.");
 
@@ -224,6 +251,18 @@ public class TicketService : ITicketService
 
         await _repository.CreateTicketsAsync(tickets, cancellationToken);
         return tickets.Count;
+    }
+
+    private static IReadOnlyList<string> ValidateTicket(Ticket ticket)
+    {
+        var validationContext = new ValidationContext(ticket);
+        var validationResults = new List<ValidationResult>();
+        Validator.TryValidateObject(ticket, validationContext, validationResults, validateAllProperties: true);
+        return validationResults
+            .Select(result => result.ErrorMessage)
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .Cast<string>()
+            .ToList();
     }
 
     private async Task<CurrentUserInfo> RequireUserAsync() => await _currentUser.GetCurrentUserAsync() ?? throw new UnauthorizedAccessException("You must be signed in.");
