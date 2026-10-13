@@ -1,8 +1,11 @@
-﻿@page "/tickets/new"
+@page "/tickets/new"
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using KestrelHelpdesk.Web.Services
 @inject ITicketService TicketService
+@inject ITicketAttachmentService TicketAttachmentService
 @inject NavigationManager Nav
 
 @attribute [Authorize]
@@ -13,14 +16,43 @@
 <h3>Create Ticket</h3>
 <p class="text-muted">New tickets are always created with Open status.</p>
 
-<TicketForm TicketModel="newTicket" IsCreateMode="true" SubmitButtonText="Create Ticket" OnValidSubmit="CreateTicket" />
+<TicketForm TicketModel="newTicket"
+            IsCreateMode="true"
+            SubmitButtonText="Create Ticket"
+            OnValidSubmit="CreateTicket"
+            OnFilesChanged="OnFilesChanged" />
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
 
 @code {
     private Ticket newTicket = new();
+    private IReadOnlyList<IBrowserFile> selectedFiles = Array.Empty<IBrowserFile>();
+    private string? errorMessage;
+
+    private Task OnFilesChanged(IReadOnlyList<IBrowserFile> files)
+    {
+        selectedFiles = files;
+        return Task.CompletedTask;
+    }
 
     private async Task CreateTicket()
     {
-        await TicketService.CreateTicketAsync(newTicket);
-        Nav.NavigateTo($"/tickets/{newTicket.Id}");
+        errorMessage = null;
+
+        try
+        {
+            await TicketService.CreateTicketAsync(newTicket);
+            await TicketAttachmentService.AddAttachmentsAsync(newTicket.Id, selectedFiles);
+            Nav.NavigateTo($"/tickets/{newTicket.Id}");
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception is InvalidOperationException or UnauthorizedAccessException
+                ? exception.Message
+                : "The ticket could not be created. Please try again.";
+        }
     }
 }
