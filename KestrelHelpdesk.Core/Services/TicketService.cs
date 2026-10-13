@@ -76,6 +76,26 @@ public class TicketService : ITicketService
         return (items, totalCount);
     }
 
+    public async Task<IReadOnlyList<Ticket>> GetTicketsForExportAsync(
+        string? statusFilter,
+        string? searchTerm,
+        TicketScope scope,
+        bool notAssignedOnly = false,
+        string? sortBy = null,
+        bool sortDescending = false)
+    {
+        var user = await RequireUserAsync();
+        var effectiveScope = GetEffectiveScope(user, scope);
+        return await _repository.GetTicketsForExportAsync(
+            statusFilter,
+            searchTerm,
+            NormalizeSortColumn(sortBy),
+            !sortDescending,
+            effectiveScope,
+            user.UserId,
+            notAssignedOnly);
+    }
+
     public async Task<Ticket?> GetTicketByIdAsync(int id)
     {
         var user = await RequireUserAsync();
