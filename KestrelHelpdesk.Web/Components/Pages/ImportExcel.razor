@@ -44,10 +44,10 @@
                 </MudAlert>
 
                 <MudText Typo="Typo.subtitle2">Validation errors</MudText>
-                <MudList Dense="true">
+                <MudList T="string" Dense="true">
                     @foreach (var error in _validation.Errors)
                     {
-                        <MudListItem>@error</MudListItem>
+                        <MudListItem T="string">@error</MudListItem>
                     }
                 </MudList>
             }
