@@ -1,4 +1,4 @@
-﻿@page "/tickets/{Id:int}"
+@page "/tickets/{Id:int}"
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Events
 @using KestrelHelpdesk.Core.Interfaces
@@ -55,6 +55,26 @@
           </small>
         </div>
       </div>
+
+      @if (ticket.Attachments.Any())
+      {
+        <div class="card mb-4 shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="card-title">Attachments (@ticket.Attachments.Count)</h5>
+            <div class="list-group">
+              @foreach (var attachment in ticket.Attachments.OrderBy(a => a.Id))
+              {
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                   href="/tickets/@ticket.Id/attachments/@attachment.Id"
+                   target="_blank">
+                  <span>@attachment.OriginalFileName</span>
+                  <small class="text-muted">@FormatFileSize(attachment.FileSize)</small>
+                </a>
+              }
+            </div>
+          </div>
+        </div>
+      }
 
       <h4 class="mb-3">Comments (@ticket.Comments.Count)</h4>
       @if (ticket.Comments.Any())
@@ -147,6 +167,13 @@
     await TicketService.AddCommentAsync(ticket.Id, newComment);
     newComment = new Comment();
     await LoadTicketAsync();
+  }
+
+  private static string FormatFileSize(long bytes)
+  {
+    if (bytes < 1024) return $"{bytes} B";
+    if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+    return $"{bytes / (1024d * 1024):0.#} MB";
   }
 
   private Task CopyTicketLink() => JS.InvokeVoidAsync("navigator.clipboard.writeText", NavigationManager.Uri).AsTask();
