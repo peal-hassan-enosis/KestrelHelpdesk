@@ -26,6 +26,10 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<ITicketQueryService, TicketQueryService>();
+builder.Services.AddScoped<ITicketAssignmentService, TicketAssignmentService>();
+builder.Services.AddScoped<ITicketCommentService, TicketCommentService>();
+builder.Services.AddScoped<ITicketImportService, TicketImportService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketAttachmentRepository, TicketAttachmentRepository>();
 builder.Services.AddScoped<IExcelTicketImportService, ExcelTicketImportService>();
@@ -54,7 +58,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
-    options.SignIn.RequireConfirmedAccount = true;
+    options.SignIn.RequireConfirmedAccount = false;
     options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
 })
 .AddRoles<IdentityRole>()
@@ -81,7 +85,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
