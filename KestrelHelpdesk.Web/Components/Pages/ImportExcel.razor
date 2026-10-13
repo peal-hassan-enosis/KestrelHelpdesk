@@ -1,0 +1,182 @@
+@page "/tickets/import-excel"
+@using KestrelHelpdesk.Core.Interfaces
+@using KestrelHelpdesk.Core.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+@inject IExcelTicketImportService ExcelImportService
+
+@attribute [Authorize(Roles = "Employee,Agent,Manager")]
+@rendermode InteractiveServer
+
+<PageTitle>Import Excel</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudText Typo="Typo.h4" GutterBottom="true">Import Excel</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+        Import tickets from an .xlsx file. Status and CreatedBy are assigned automatically.
+    </MudText>
+
+    <MudPaper Class="pa-4">
+        <InputFile OnChange="SelectFile" accept=".xlsx" />
+
+        @if (_selectedFile is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-3">Selected: @_selectedFile.Name</MudText>
+        }
+
+        <MudButton Variant="Variant.Filled"
+                    Color="Color.Primary"
+                    Disabled="@(_selectedFile is null || _isBusy)"
+                    OnClick="ValidateFile"
+                    Class="mt-4">
+            @(_isBusy ? "Validating..." : "Validate Excel")
+        </MudButton>
+    </MudPaper>
+
+    @if (_validation is not null)
+    {
+        <MudPaper Class="pa-4 mt-4">
+            @if (_validation.Errors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-3">
+                    The Excel file was not imported because validation failed.
+                </MudAlert>
+
+                <MudText Typo="Typo.subtitle2">Validation errors</MudText>
+                <MudList Dense="true">
+                    @foreach (var error in _validation.Errors)
+                    {
+                        <MudListItem>@error</MudListItem>
+                    }
+                </MudList>
+            }
+            else if (_validation.RequiresAssignmentConfirmation)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-3">
+                    The Excel file contains an Assigned To column. Your role is not authorized to assign tickets.
+                    If you continue, the tickets will be created but will not be assigned as you are not authorized for assigning tickets.
+                </MudAlert>
+
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    @_validation.Rows.Count ticket(s) passed validation. Do you want to continue?
+                </MudText>
+
+                <MudButton Variant="Variant.Filled"
+                            Color="Color.Warning"
+                            Disabled="@_isBusy"
+                            OnClick="() => ImportAsync(ignoreAssignments: true)">
+                    Continue Without Assignments
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                            Disabled="@_isBusy"
+                            OnClick="CancelImport"
+                            Class="ml-2">
+                    Cancel
+                </MudButton>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Success" Class="mb-3">
+                    All @_validation.Rows.Count ticket(s) passed validation. No tickets have been imported yet.
+                </MudAlert>
+
+                <MudButton Variant="Variant.Filled"
+                            Color="Color.Success"
+                            Disabled="@_isBusy"
+                            OnClick="() => ImportAsync(ignoreAssignments: false)">
+                    Import Tickets
+                </MudButton>
+            }
+        </MudPaper>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_successMessage))
+    {
+        <MudAlert Severity="Severity.Success" Class="mt-4">@_successMessage</MudAlert>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">@_errorMessage</MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private const long MaxFileSize = 10 * 1024 * 1024;
+
+    private IBrowserFile? _selectedFile;
+    private TicketImportValidationResult? _validation;
+    private bool _isBusy;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    private void SelectFile(InputFileChangeEventArgs args)
+    {
+        _selectedFile = args.File;
+        _validation = null;
+        _successMessage = null;
+        _errorMessage = null;
+    }
+
+    private async Task ValidateFile()
+    {
+        if (_selectedFile is null)
+            return;
+
+        _isBusy = true;
+        _validation = null;
+        _successMessage = null;
+        _errorMessage = null;
+
+        try
+        {
+            await using var stream = _selectedFile.OpenReadStream(MaxFileSize);
+            _validation = await ExcelImportService.ValidateAsync(stream);
+        }
+        catch (IOException)
+        {
+            _errorMessage = "The Excel file could not be read. Make sure it is an .xlsx file and is smaller than 10 MB.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Excel validation failed: {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ImportAsync(bool ignoreAssignments)
+    {
+        if (_validation is null || !_validation.IsValid)
+            return;
+
+        _isBusy = true;
+        _successMessage = null;
+        _errorMessage = null;
+
+        try
+        {
+            var count = await ExcelImportService.ImportAsync(_validation.Rows, ignoreAssignments);
+            _successMessage = $"Successfully imported {count} ticket(s). All imported tickets were created with Open status.";
+            _validation = null;
+            _selectedFile = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Import failed. No tickets were imported: {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void CancelImport()
+    {
+        _validation = null;
+        _successMessage = "Import cancelled. No tickets were created.";
+    }
+}
