@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace KestrelHelpdesk.Infrastructure.Migrations
 {
+    [Migration("20261013000000_Attachments")]
     public partial class Attachments : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
