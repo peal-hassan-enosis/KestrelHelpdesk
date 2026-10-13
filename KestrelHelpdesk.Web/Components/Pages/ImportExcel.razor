@@ -18,12 +18,24 @@
         <p class="page-subtitle">Bring an .xlsx ticket list into the workspace. Status and creator are assigned automatically.</p>
     </div>
 
-    <MudPaper Class="pa-4 form-surface">
-        <InputFile OnChange="SelectFile" accept=".xlsx" />
+    <MudPaper Class="pa-4 form-surface import-upload-card">
+        <div class="ticket-section-heading">
+            <span class="eyebrow">UPLOAD SPREADSHEET</span>
+            <h2 class="card-title">Choose an Excel file</h2>
+        </div>
+        <p class="text-muted small mb-3">Select a validated .xlsx workbook. The import review will show any errors before tickets are created.</p>
+        <label class="file-upload-panel import-file-panel">
+            <span class="file-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 12l5 5m0-5-5 5"/></svg></span>
+            <span class="file-upload-copy"><strong>Select an .xlsx workbook</strong><small>Excel workbook · Maximum file size 10 MB</small></span>
+            <InputFile OnChange="SelectFile" accept=".xlsx" class="import-file-input" />
+        </label>
 
         @if (_selectedFile is not null)
         {
-            <MudText Typo="Typo.body2" Class="mt-3">Selected: @_selectedFile.Name</MudText>
+            <div class="selected-file-row mt-3">
+                <span class="selected-file-check" aria-hidden="true">✓</span>
+                <span><strong>@_selectedFile.Name</strong><small>File selected and ready to validate</small></span>
+            </div>
         }
 
         <MudButton Variant="Variant.Filled"
