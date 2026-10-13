@@ -9,6 +9,10 @@ public interface ITicketRepository
         int startIndex, int? count, string? statusFilter, string? searchTerm,
         string? sortByColumn, bool sortByAscending, TicketScope scope, string userId, bool notAssignedOnly);
 
+    Task<IReadOnlyList<Ticket>> GetTicketsForExportAsync(
+        string? statusFilter, string? searchTerm,
+        string? sortByColumn, bool sortByAscending, TicketScope scope, string userId, bool notAssignedOnly);
+
     Task<Ticket?> GetTicketByIdAsync(int id);
     Task CreateTicketAsync(Ticket ticket);
     Task CreateTicketsAsync(IReadOnlyList<Ticket> tickets, CancellationToken cancellationToken = default);
