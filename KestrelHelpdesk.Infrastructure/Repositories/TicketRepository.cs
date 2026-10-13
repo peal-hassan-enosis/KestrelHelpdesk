@@ -1,4 +1,4 @@
-﻿using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
 using KestrelHelpdesk.Infrastructure.Data;
@@ -77,7 +77,10 @@ public class TicketRepository : ITicketRepository
     public async Task<Ticket?> GetTicketByIdAsync(int id)
     {
         using var context = await _factory.CreateDbContextAsync();
-        return await context.Tickets.Include(t => t.Comments).FirstOrDefaultAsync(t => t.Id == id);
+        return await context.Tickets
+            .Include(t => t.Comments)
+            .Include(t => t.Attachments)
+            .FirstOrDefaultAsync(t => t.Id == id);
     }
 
     public async Task CreateTicketAsync(Ticket ticket)
