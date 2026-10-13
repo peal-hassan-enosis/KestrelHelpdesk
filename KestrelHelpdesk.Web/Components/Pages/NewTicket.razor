@@ -1,4 +1,5 @@
 @page "/tickets/new"
+@using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Authorization
@@ -6,7 +7,7 @@
 @inject ITicketAttachmentService TicketAttachmentService
 @inject NavigationManager Nav
 
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
 @rendermode InteractiveServer
 
 <PageTitle>Create New Ticket</PageTitle>
