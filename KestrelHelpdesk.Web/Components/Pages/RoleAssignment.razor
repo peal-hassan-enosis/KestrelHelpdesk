@@ -1,0 +1,217 @@
+@page "/role-assignment"
+@using KestrelHelpdesk.Core.Authorization
+@using KestrelHelpdesk.Core.Interfaces
+@using KestrelHelpdesk.Core.Models
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@inject IRoleManagementService RoleManagementService
+
+@attribute [Authorize(Roles = AppRoles.Manager)]
+@rendermode InteractiveServer
+
+<PageTitle>Role Assignment - Kestrel Helpdesk</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudText Typo="Typo.h4" GutterBottom="true">Role Assignment</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+        Manage Employee and Agent access. The Manager account is not listed here.
+    </MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_successMessage))
+    {
+        <MudAlert Severity="Severity.Success" Class="mb-4">@_successMessage</MudAlert>
+    }
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0">
+                Already Assigned
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1">
+                New Registered User
+            </button>
+        </li>
+    </ul>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mb-4" />
+    }
+    else if (_activeTab == 0)
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Already Assigned</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                Change an existing Employee to Agent or Agent to Employee.
+            </MudText>
+
+            @if (_assignedUsers.Count == 0)
+            {
+                <MudText Color="Color.Secondary">No Employee or Agent users are assigned yet.</MudText>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Current Role</th>
+                                <th style="width: 220px;">Change Role</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in _assignedUsers)
+                            {
+                                <tr>
+                                    <td>@user.Email</td>
+                                    <td>
+                                        <MudChip T="string" Color="@GetRoleColor(user.Role)" Size="Size.Small">
+                                            @user.Role
+                                        </MudChip>
+                                    </td>
+                                    <td>
+                                        <select class="form-select"
+                                                value="@user.Role"
+                                                disabled="@_isSaving"
+                                                @onchange="args => ChangeAssignedRoleAsync(user, args.Value?.ToString())">
+                                            <option value="Employee">Employee</option>
+                                            <option value="Agent">Agent</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">New Registered User</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                These users have registered but have not received an application role yet.
+            </MudText>
+
+            @if (_unassignedUsers.Count == 0)
+            {
+                <MudText Color="Color.Secondary">There are no new registered users waiting for a role.</MudText>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th style="width: 220px;">Assign Role</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in _unassignedUsers)
+                            {
+                                <tr>
+                                    <td>@user.Email</td>
+                                    <td>
+                                        <select class="form-select"
+                                                disabled="@_isSaving"
+                                                @onchange="args => AssignNewRoleAsync(user, args.Value?.ToString())">
+                                            <option value="">Select role</option>
+                                            <option value="Employee">Employee</option>
+                                            <option value="Agent">Agent</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private IReadOnlyList<RoleManagementUser> _assignedUsers = [];
+    private IReadOnlyList<RoleManagementUser> _unassignedUsers = [];
+    private int _activeTab;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _assignedUsers = await RoleManagementService.GetAssignedUsersAsync();
+            _unassignedUsers = await RoleManagementService.GetUnassignedUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Could not load users: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ChangeAssignedRoleAsync(RoleManagementUser user, string? role)
+    {
+        if (string.IsNullOrWhiteSpace(role) || role == user.Role)
+            return;
+
+        await ApplyRoleAsync(user, role, $"{user.Email} is now assigned as {role}.");
+    }
+
+    private async Task AssignNewRoleAsync(RoleManagementUser user, string? role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+            return;
+
+        await ApplyRoleAsync(user, role, $"{user.Email} is now assigned as {role}.");
+    }
+
+    private async Task ApplyRoleAsync(RoleManagementUser user, string role, string successMessage)
+    {
+        _isSaving = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            await RoleManagementService.AssignRoleAsync(user.Id, role);
+            _successMessage = successMessage;
+            await LoadUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Role assignment failed: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private static Color GetRoleColor(string role) =>
+        role == AppRoles.Agent ? Color.Info : Color.Success;
+}
