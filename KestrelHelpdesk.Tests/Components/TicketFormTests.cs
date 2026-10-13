@@ -53,6 +53,9 @@ public class TicketFormTests : BunitContext
 
     private sealed class TestTicketAttachmentService : ITicketAttachmentService
     {
+        public long MaxFileSize => 10 * 1024 * 1024;
+        public int MaxFilesPerTicket => 3;
+
         public Task<IReadOnlyList<string>> ValidateFilesAsync(
             int ticketId,
             IReadOnlyList<IBrowserFile> files,
