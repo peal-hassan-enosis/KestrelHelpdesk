@@ -96,7 +96,7 @@ app.MapGet("/tickets/{ticketId:int}/attachments/{attachmentId:int}", async (
     try
     {
         var download = await attachmentService.OpenDownloadAsync(ticketId, attachmentId, cancellationToken);
-        return Results.File(download.Content, download.ContentType, download.FileName);
+        return (IResult)Results.File(download.Content, download.ContentType, download.FileName);
     }
     catch (UnauthorizedAccessException)
     {
