@@ -1,106 +1,51 @@
-@using KestrelHelpdesk.Core.Authorization
 @inherits LayoutComponentBase
-@inject NavigationManager NavigationManager
+@using KestrelHelpdesk.Core.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 
-<MudThemeProvider />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
-
-@if (IsLoginPage)
-{
-  <main class="content px-4">
-    @Body
-  </main>
-}
-else
-{
-  <AuthorizeView>
-    <Authorized Context="auth">
-      @if (HasApplicationRole(auth.User))
-      {
-        <div class="page">
-          <div class="sidebar">
-            <NavMenu />
-          </div>
-
-          <main>
-            <div class="top-row px-4 d-flex justify-content-between align-items-center">
-              <span class="fw-bold">Kestrel Helpdesk</span>
-
-              <div class="d-flex align-items-center gap-3">
-                <span class="small text-muted">
-                  @auth.User.Identity?.Name
-                  <span class="badge bg-secondary ms-1">@GetRole(auth.User)</span>
-                </span>
-
-                <a href="/Account/Manage" class="btn btn-sm btn-outline-secondary">Account</a>
-
-                <form action="/Account/Logout" method="post" class="d-inline">
-                  <AntiforgeryToken />
-                  <input type="hidden" name="returnUrl" value="" />
-                  <button type="submit" class="btn btn-sm btn-outline-danger">Log out</button>
-                </form>
-              </div>
+<div class="page">
+    <AuthorizeView Roles="Employee,Agent,Manager">
+        <Authorized>
+            <div class="sidebar">
+                <NavMenu />
             </div>
+        </Authorized>
+    </AuthorizeView>
 
-            <article class="content px-4">
-              @Body
-            </article>
-          </main>
-        </div>
-      }
-      else
-      {
-        <main>
-          <div class="top-row px-4 d-flex justify-content-between align-items-center">
-            <span class="fw-bold">Kestrel Helpdesk</span>
+    <main>
+        <div class="top-row px-4">
+            <a class="brand-link" href="/">Kestrel Helpdesk</a>
 
-            <form action="/Account/Logout" method="post" class="d-inline">
-              <AntiforgeryToken />
-              <input type="hidden" name="returnUrl" value="" />
-              <button type="submit" class="btn btn-sm btn-outline-danger">Log out</button>
-            </form>
-          </div>
-
-          <article class="content px-4">
-            @Body
-          </article>
-        </main>
-      }
-    </Authorized>
-
-    <NotAuthorized>
-      <main>
-        <div class="top-row px-4 d-flex justify-content-between align-items-center">
-          <span class="fw-bold">Kestrel Helpdesk</span>
-          <a href="/Account/Login" class="btn btn-sm btn-primary">Log in</a>
+            <AuthorizeView>
+                <Authorized>
+                    <span class="ms-auto me-3">
+                        @context.User.Identity?.Name
+                        @if (context.User.IsInRole(AppRoles.Manager))
+                        {
+                            <span class="badge bg-danger ms-2">Manager</span>
+                        }
+                        else if (context.User.IsInRole(AppRoles.Agent))
+                        {
+                            <span class="badge bg-info ms-2">Agent</span>
+                        }
+                        else if (context.User.IsInRole(AppRoles.Employee))
+                        {
+                            <span class="badge bg-secondary ms-2">Employee</span>
+                        }
+                    </span>
+                    <form action="/Account/Logout" method="post" class="d-inline">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="returnUrl" value="" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Log out</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <a class="btn btn-outline-primary btn-sm" href="/Account/Login">Log in</a>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
-          @Body
+            @Body
         </article>
-      </main>
-    </NotAuthorized>
-  </AuthorizeView>
-}
-
-@code {
-  private bool IsLoginPage =>
-    NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
-      .Split('?', '#')[0]
-      .StartsWith("Account/Login", StringComparison.OrdinalIgnoreCase);
-
-  private static bool HasApplicationRole(System.Security.Claims.ClaimsPrincipal user) =>
-    user.IsInRole(AppRoles.Manager) ||
-    user.IsInRole(AppRoles.Agent) ||
-    user.IsInRole(AppRoles.Employee);
-
-  private static string GetRole(System.Security.Claims.ClaimsPrincipal user)
-  {
-    if (user.IsInRole(AppRoles.Manager)) return AppRoles.Manager;
-    if (user.IsInRole(AppRoles.Agent)) return AppRoles.Agent;
-    if (user.IsInRole(AppRoles.Employee)) return AppRoles.Employee;
-    return "User";
-  }
-}
+    </main>
+</div>
