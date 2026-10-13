@@ -1,6 +1,8 @@
-﻿@inject IJSRuntime JS
+@inject IJSRuntime JS
+@inject ITicketAttachmentService TicketAttachmentService
 @implements IAsyncDisposable
 @using KestrelHelpdesk.Core.Models
+@using Microsoft.AspNetCore.Components.Forms
 
 <EditForm Model="TicketModel" OnValidSubmit="HandleValidSubmit">
   <DataAnnotationsValidator />
@@ -63,6 +65,54 @@
     <ValidationMessage For="@(() => TicketModel.Description)" class="text-danger small" />
   </div>
 
+  <div class="mb-4">
+    <label class="form-label fw-bold">Attachments</label>
+
+    @if (ExistingAttachments.Count > 0)
+    {
+      <div class="list-group mb-2">
+        @foreach (var attachment in ExistingAttachments)
+        {
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <a href="/tickets/@TicketModel.Id/attachments/@attachment.Id" target="_blank">@attachment.OriginalFileName</a>
+              <small class="text-muted ms-2">(@FormatFileSize(attachment.FileSize))</small>
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveExistingAttachmentAsync(attachment)">Delete</button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (SelectedFiles.Count > 0)
+    {
+      <div class="list-group mb-2">
+        @foreach (var file in SelectedFiles)
+        {
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <span>@file.Name <small class="text-muted ms-2">(@FormatFileSize(file.Size))</small></span>
+            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveSelectedFile(file)">Remove</button>
+          </div>
+        }
+      </div>
+    }
+
+    <InputFile OnChange="HandleFilesSelected" multiple class="form-control" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt,.zip" />
+    <small class="text-muted">Maximum 3 files per ticket, 10 MB per file. Allowed: PDF, images, Word, Excel, TXT and ZIP.</small>
+
+    @if (_attachmentErrors.Count > 0)
+    {
+      <div class="alert alert-danger mt-2 mb-0">
+        <ul class="mb-0">
+          @foreach (var error in _attachmentErrors)
+          {
+            <li>@error</li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+
   <div class="d-flex justify-content-between">
     <a href="/tickets" class="btn btn-outline-secondary">Cancel</a>
     <button type="submit" class="btn btn-primary">@SubmitButtonText</button>
@@ -75,6 +125,12 @@
   [Parameter] public bool CanEditStatus { get; set; } = true;
   [Parameter] public string SubmitButtonText { get; set; } = "Save Ticket";
   [Parameter] public EventCallback<Ticket> OnValidSubmit { get; set; }
+  [Parameter] public IReadOnlyList<TicketAttachment> ExistingAttachments { get; set; } = Array.Empty<TicketAttachment>();
+  [Parameter] public EventCallback<TicketAttachment> OnExistingAttachmentRemoved { get; set; }
+  [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnFilesChanged { get; set; }
+
+  private readonly List<IBrowserFile> SelectedFiles = new();
+  private readonly List<string> _attachmentErrors = new();
   private IJSObjectReference? module;
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -82,6 +138,52 @@
     if (!firstRender) return;
     module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/ticket-form.js");
     await module.InvokeVoidAsync("focusElement", "ticket-title");
+  }
+
+  private async Task HandleFilesSelected(InputFileChangeEventArgs args)
+  {
+    _attachmentErrors.Clear();
+
+    if (args.FileCount == 0)
+      return;
+
+    if (args.FileCount > ITicketAttachmentService.MaxAttachmentsPerTicket)
+    {
+      _attachmentErrors.Add("You can select a maximum of 3 files.");
+      return;
+    }
+
+    var files = args.GetMultipleFiles(ITicketAttachmentService.MaxAttachmentsPerTicket);
+    var errors = TicketAttachmentService.ValidateFiles(files, ExistingAttachments.Count);
+    if (errors.Count > 0)
+    {
+      _attachmentErrors.AddRange(errors);
+      return;
+    }
+
+    SelectedFiles.Clear();
+    SelectedFiles.AddRange(files);
+    await OnFilesChanged.InvokeAsync(SelectedFiles.ToArray());
+  }
+
+  private async Task RemoveSelectedFile(IBrowserFile file)
+  {
+    SelectedFiles.Remove(file);
+    _attachmentErrors.Clear();
+    await OnFilesChanged.InvokeAsync(SelectedFiles.ToArray());
+  }
+
+  private async Task RemoveExistingAttachmentAsync(TicketAttachment attachment)
+  {
+    if (OnExistingAttachmentRemoved.HasDelegate)
+      await OnExistingAttachmentRemoved.InvokeAsync(attachment);
+  }
+
+  private static string FormatFileSize(long bytes)
+  {
+    if (bytes < 1024) return $"{bytes} B";
+    if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+    return $"{bytes / (1024d * 1024):0.#} MB";
   }
 
   private async Task HandleValidSubmit()
