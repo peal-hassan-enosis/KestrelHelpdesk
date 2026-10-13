@@ -2,50 +2,59 @@
 @using KestrelHelpdesk.Core.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 
-<div class="page">
+<div class="app-shell">
     <AuthorizeView Roles="Employee,Agent,Manager">
         <Authorized>
-            <div class="sidebar">
+            <aside class="app-sidebar">
+                <a class="sidebar-brand" href="/dashboard" aria-label="Kestrel Helpdesk dashboard">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 36 36" role="img"><path d="M18 3.5 31 11v14L18 32.5 5 25V11Z" fill="none" stroke="currentColor" stroke-width="2.2" /><path d="m12 22 4-10h4l4 10m-10-3h12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" /></svg>
+                    </span>
+                    <span class="brand-wordmark">Kestrel <small>HELPDESK</small></span>
+                </a>
                 <NavMenu />
-            </div>
+                <div class="sidebar-footer"><span class="connection-dot" aria-hidden="true"></span><div><strong>Support workspace</strong><small>Requests, ownership &amp; resolution</small></div></div>
+            </aside>
         </Authorized>
     </AuthorizeView>
 
-    <main>
-        <div class="top-row px-4">
-            <a class="brand-link" href="/">Kestrel Helpdesk</a>
-
-            <AuthorizeView>
+    <div class="app-main">
+        <header class="app-topbar">
+            <div class="topbar-context"><span class="topbar-kicker">KESTREL HELPDESK</span><span class="topbar-context-title">Support workspace</span></div>
+            <AuthorizeView Context="authState">
                 <Authorized>
-                    <span class="ms-auto me-3">
-                        @context.User.Identity?.Name
-                        @if (context.User.IsInRole(AppRoles.Manager))
-                        {
-                            <span class="badge bg-danger ms-2">Manager</span>
-                        }
-                        else if (context.User.IsInRole(AppRoles.Agent))
-                        {
-                            <span class="badge bg-info ms-2">Agent</span>
-                        }
-                        else if (context.User.IsInRole(AppRoles.Employee))
-                        {
-                            <span class="badge bg-secondary ms-2">Employee</span>
-                        }
-                    </span>
-                    <form action="/Account/Logout" method="post" class="d-inline">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="returnUrl" value="" />
-                        <button type="submit" class="btn btn-outline-danger btn-sm">Log out</button>
-                    </form>
+                    <div class="topbar-user">
+                        <span class="user-avatar" aria-hidden="true">@GetInitials(authState.User.Identity?.Name)</span>
+                        <div class="user-details">
+                            <span class="user-email">@authState.User.Identity?.Name</span>
+                            @if (authState.User.IsInRole(AppRoles.Manager)) { <span class="role-pill role-manager">Manager</span> }
+                            else if (authState.User.IsInRole(AppRoles.Agent)) { <span class="role-pill role-agent">Agent</span> }
+                            else if (authState.User.IsInRole(AppRoles.Employee)) { <span class="role-pill role-employee">Employee</span> }
+                            else { <span class="role-pill role-pending">Role pending</span> }
+                        </div>
+                        <form action="/Account/Logout" method="post" class="logout-form">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="returnUrl" value="" />
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Sign out</button>
+                        </form>
+                    </div>
                 </Authorized>
-                <NotAuthorized>
-                    <a class="btn btn-outline-primary btn-sm" href="/Account/Login">Log in</a>
-                </NotAuthorized>
+                <NotAuthorized><a class="btn btn-primary btn-sm topbar-sign-in" href="/Account/Login">Sign in <span aria-hidden="true">↗</span></a></NotAuthorized>
             </AuthorizeView>
-        </div>
+        </header>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+        <main class="app-content"><div class="content-inner">@Body</div></main>
+        <footer class="app-footer"><span>Kestrel Helpdesk <span class="footer-dot">·</span> Support request management</span><span>Clear status. Clear ownership. Better follow-through.</span></footer>
+    </div>
 </div>
+
+@code {
+    private static string GetInitials(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "KH";
+        var name = value.Split('@', 2)[0];
+        var parts = name.Split(new[] { '.', '_', '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 1) return string.Concat(char.ToUpperInvariant(parts[0][0]), char.ToUpperInvariant(parts[1][0]));
+        return name.Length >= 2 ? name[..2].ToUpperInvariant() : name.ToUpperInvariant();
+    }
+}
