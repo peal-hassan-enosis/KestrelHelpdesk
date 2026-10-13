@@ -167,3 +167,23 @@ textarea.form-control{min-height:116px;resize:vertical}.form-control::placeholde
   .landing-preview-window{padding:15px}.landing-section{padding-top:34px}.landing-bottom-cta{padding:21px}
   .auth-card{padding:21px}.auth-story-points{grid-template-columns:1fr}.ticket-form{padding:17px}
 }
+
+
+/* Component-style fallbacks keep interactive controls clear even if a component theme is partially overridden. */
+.mud-button-filled { border: 1px solid transparent !important; }
+.mud-button-filled-primary { color: #fff !important; background: var(--brand-600) !important; }
+.mud-button-filled-primary:hover { background: var(--brand-700) !important; }
+.mud-button-outlined { background: #fff !important; }
+.mud-button-outlined-primary { border: 1px solid #c8d5f8 !important; color: var(--brand-700) !important; }
+.mud-button-outlined-secondary { border: 1px solid #d6deea !important; color: #52627b !important; }
+.mud-paper { background: #fff !important; }
+.mud-chip { min-height: 25px; border-radius: 8px !important; font-size: 11px !important; }
+.mud-chip-filled.mud-chip-color-primary { color: #2455a8 !important; background: #eaf1ff !important; }
+.mud-chip-filled.mud-chip-color-warning { color: #8a5b0b !important; background: #fff2d8 !important; }
+.mud-chip-filled.mud-chip-color-success { color: #087a60 !important; background: #e2f7ef !important; }
+.mud-chip-filled.mud-chip-color-info { color: #1b6b9d !important; background: #e3f4ff !important; }
+.mud-chip-filled.mud-chip-color-error { color: #a72e3e !important; background: #ffeaed !important; }
+.mud-chip-filled.mud-chip-color-default { color: #52627b !important; background: #eef2f7 !important; }
+.ticket-create-page .ticket-form, .ticket-edit-page .ticket-form { padding: 0; }
+.onboarding-card .card-body { padding: 0; }
+.request-id-line { display:inline-block; padding:8px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface-soft); font-size:11px; }
