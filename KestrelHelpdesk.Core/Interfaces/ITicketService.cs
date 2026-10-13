@@ -23,6 +23,14 @@ public interface ITicketService
         string? sortBy = null,
         bool sortDescending = false);
 
+    Task<IReadOnlyList<Ticket>> GetTicketsForExportAsync(
+        string? statusFilter,
+        string? searchTerm,
+        TicketScope scope,
+        bool notAssignedOnly = false,
+        string? sortBy = null,
+        bool sortDescending = false);
+
     Task<Ticket?> GetTicketByIdAsync(int id);
     Task CreateTicketAsync(Ticket ticket);
     Task UpdateTicketAsync(Ticket ticket);
