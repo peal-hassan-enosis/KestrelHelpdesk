@@ -1,8 +1,8 @@
 @inject IJSRuntime JS
-@inject ITicketAttachmentService TicketAttachmentService
 @implements IAsyncDisposable
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Components.Forms
+@using KestrelHelpdesk.Web.Services
 
 <EditForm Model="TicketModel" OnValidSubmit="HandleValidSubmit">
   <DataAnnotationsValidator />
@@ -147,14 +147,14 @@
     if (args.FileCount == 0)
       return;
 
-    if (args.FileCount > ITicketAttachmentService.MaxAttachmentsPerTicket)
+    if (args.FileCount > TicketAttachmentValidation.MaxAttachmentsPerTicket)
     {
       _attachmentErrors.Add("You can select a maximum of 3 files.");
       return;
     }
 
-    var files = args.GetMultipleFiles(ITicketAttachmentService.MaxAttachmentsPerTicket);
-    var errors = TicketAttachmentService.ValidateFiles(files, ExistingAttachments.Count);
+    var files = args.GetMultipleFiles(TicketAttachmentValidation.MaxAttachmentsPerTicket);
+    var errors = TicketAttachmentValidation.ValidateFiles(files, ExistingAttachments.Count);
     if (errors.Count > 0)
     {
       _attachmentErrors.AddRange(errors);
