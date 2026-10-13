@@ -36,8 +36,11 @@ public sealed class TicketAttachmentDownloadService : ITicketAttachmentDownloadS
 
         var currentUser = new CurrentUserInfo(
             userId,
-            user.Identity.Name,
-            user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToArray());
+            user.FindFirstValue(ClaimTypes.Email) ?? user.Identity.Name ?? string.Empty,
+            user.Claims
+                .Where(c => c.Type == ClaimTypes.Role)
+                .Select(c => c.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase));
 
         if (!TicketAccessPolicy.CanView(currentUser, ticket))
             throw new UnauthorizedAccessException();
