@@ -90,12 +90,18 @@ app.MapHealthChecks("/health");
 app.MapGet("/tickets/{ticketId:int}/attachments/{attachmentId:int}", async (
     int ticketId,
     int attachmentId,
+    HttpContext httpContext,
     ITicketAttachmentService attachmentService,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var download = await attachmentService.OpenDownloadAsync(ticketId, attachmentId, cancellationToken);
+        var download = await attachmentService.OpenDownloadAsync(
+            ticketId,
+            attachmentId,
+            httpContext.User,
+            cancellationToken);
+
         return (IResult)Results.File(download.Content, download.ContentType, download.FileName);
     }
     catch (UnauthorizedAccessException)
