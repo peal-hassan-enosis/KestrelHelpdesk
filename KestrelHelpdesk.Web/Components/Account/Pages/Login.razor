@@ -7,13 +7,25 @@
 @inject ILogger<Login> Logger
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Log in - Kestrel Helpdesk</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
-            <StatusMessage Message="@errorMessage" />
+<div class="auth-page">
+    <aside class="auth-story">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M18 3.5 31 11v14L18 32.5 5 25V11Z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m12 22 4-10h4l4 10m-10-3h12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"/></svg></span>
+        <p class="eyebrow">SECURE SUPPORT WORKSPACE</p>
+        <h1>Good to have you back.</h1>
+        <p>Sign in to follow requests, review updates, add useful context and keep work moving toward resolution.</p>
+        <div class="auth-story-points">
+            <span class="auth-story-point">Find your tickets quickly</span>
+            <span class="auth-story-point">Keep comments and files together</span>
+            <span class="auth-story-point">See clear status and ownership</span>
+        </div>
+    </aside>
+    <section class="auth-card">
+        <p class="eyebrow">WELCOME BACK</p>
+        <h2>Sign in to Kestrel</h2>
+        <p class="auth-intro">Use your work email and password to continue.</p>
+        <StatusMessage Message="@errorMessage" />
             <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="text-danger" role="alert" />
@@ -39,8 +51,7 @@
                     <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
                 </p>
             </EditForm>
-        </section>
-    </div>
+    </section>
 </div>
 
 @code {
