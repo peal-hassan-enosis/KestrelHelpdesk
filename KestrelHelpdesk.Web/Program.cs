@@ -34,6 +34,7 @@ builder.Services.AddScoped<ITicketAttachmentService, TicketAttachmentService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<ICurrentUserContext, IdentityCurrentUserContext>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
+builder.Services.AddScoped<IRoleManagementService, IdentityRoleManagementService>();
 builder.Services.AddScoped<BrowserTimeZoneService>();
 builder.Services.AddScoped<CircuitHandler, LoggingCircuitHandler>();
 builder.Services.AddSingleton<ITicketEventService, TicketEventService>();
