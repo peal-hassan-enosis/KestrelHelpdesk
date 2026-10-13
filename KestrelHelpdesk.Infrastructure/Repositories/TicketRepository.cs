@@ -17,6 +17,31 @@ public class TicketRepository : ITicketRepository
         string? sortByColumn, bool sortByAscending, TicketScope scope, string userId, bool notAssignedOnly)
     {
         using var context = await _factory.CreateDbContextAsync();
+        var query = BuildTicketQuery(context, statusFilter, searchTerm, sortByColumn, sortByAscending, scope, userId, notAssignedOnly);
+        var totalCount = await query.CountAsync();
+        var items = await query.Skip(startIndex).Take(count ?? 50).ToListAsync();
+        return (items, totalCount);
+    }
+
+    public async Task<IReadOnlyList<Ticket>> GetTicketsForExportAsync(
+        string? statusFilter, string? searchTerm,
+        string? sortByColumn, bool sortByAscending, TicketScope scope, string userId, bool notAssignedOnly)
+    {
+        using var context = await _factory.CreateDbContextAsync();
+        var query = BuildTicketQuery(context, statusFilter, searchTerm, sortByColumn, sortByAscending, scope, userId, notAssignedOnly);
+        return await query.ToListAsync();
+    }
+
+    private static IQueryable<Ticket> BuildTicketQuery(
+        ApplicationDbContext context,
+        string? statusFilter,
+        string? searchTerm,
+        string? sortByColumn,
+        bool sortByAscending,
+        TicketScope scope,
+        string userId,
+        bool notAssignedOnly)
+    {
         var query = context.Tickets.AsNoTracking();
 
         query = scope switch
@@ -39,18 +64,14 @@ public class TicketRepository : ITicketRepository
         if (notAssignedOnly)
             query = query.Where(t => t.Status == TicketStatus.Open && t.AssignedToUserId == null);
 
-        var totalCount = await query.CountAsync();
-
-        query = sortByColumn switch
+        return sortByColumn switch
         {
             "Title" => sortByAscending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title),
             "Status" => sortByAscending ? query.OrderBy(t => t.Status) : query.OrderByDescending(t => t.Status),
             "Priority" => sortByAscending ? query.OrderBy(t => t.Priority) : query.OrderByDescending(t => t.Priority),
+            "Id" => sortByAscending ? query.OrderBy(t => t.Id) : query.OrderByDescending(t => t.Id),
             _ => sortByAscending ? query.OrderBy(t => t.CreatedAt) : query.OrderByDescending(t => t.CreatedAt)
         };
-
-        var items = await query.Skip(startIndex).Take(count ?? 50).ToListAsync();
-        return (items, totalCount);
     }
 
     public async Task<Ticket?> GetTicketByIdAsync(int id)
