@@ -19,6 +19,8 @@
 
 <PageTitle>Ticket #@Id - Kestrel Helpdesk</PageTitle>
 
+<div class="page-shell page-shell-wide ticket-details-page">
+
 <ErrorBoundary>
   <ChildContent>
     @if (notFound)
@@ -35,14 +37,18 @@
     }
     else
     {
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>#@ticket.Id - @ticket.Title</h2>
+      <header class="page-header page-header-split ticket-detail-header">
         <div>
-          <button class="btn btn-outline-primary me-2" @onclick="CopyTicketLink">Copy Link</button>
-          <a href="/tickets/@ticket.Id/edit" class="btn btn-outline-primary me-2">Edit Ticket</a>
-          <a href="/tickets" class="btn btn-outline-secondary">Back to Board</a>
+          <p class="eyebrow">TICKET DETAILS · #@ticket.Id</p>
+          <h1 class="page-title">@ticket.Title</h1>
+          <p class="page-subtitle">Review the request, supporting files and conversation history.</p>
         </div>
-      </div>
+        <div class="page-actions">
+          <button class="btn btn-outline-primary" @onclick="CopyTicketLink">Copy link</button>
+          <a href="/tickets/@ticket.Id/edit" class="btn btn-primary">Edit ticket</a>
+          <a href="/tickets" class="btn btn-outline-secondary">Back to board</a>
+        </div>
+      </header>
 
       <div class="card mb-4 shadow-sm border-0">
         <div class="card-body">
@@ -82,7 +88,7 @@
       <h4 class="mb-3">Comments (@ticket.Comments.Count)</h4>
       @if (ticket.Comments.Any())
       {
-        <div class="d-flex flex-column gap-3 mb-4">
+        <div class="comments-list mb-4">
           @foreach (var comment in ticket.Comments.OrderBy(c => c.CreatedAt))
           {
             <div class="card shadow-sm border-0" @key="comment.Id">
@@ -100,7 +106,7 @@
         </div>
       }
 
-      <div class="card shadow-sm border-0 bg-light">
+      <div class="card shadow-sm border-0 add-comment-card">
         <div class="card-body">
           <h5 class="card-title">Add a Comment</h5>
           <textarea class="form-control mb-3" rows="3" placeholder="Write a response..." @bind="newComment.Text" @bind:event="oninput"></textarea>
@@ -118,6 +124,8 @@
     </div>
   </ErrorContent>
 </ErrorBoundary>
+
+</div>
 
 @code {
   [Parameter] public int Id { get; set; }
