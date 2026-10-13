@@ -2,8 +2,6 @@
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Forms
-@using KestrelHelpdesk.Web.Services
 @inject ITicketService TicketService
 @inject ITicketAttachmentService TicketAttachmentService
 @inject NavigationManager Nav
@@ -16,43 +14,19 @@
 <h3>Create Ticket</h3>
 <p class="text-muted">New tickets are always created with Open status.</p>
 
-<TicketForm TicketModel="newTicket"
-            IsCreateMode="true"
-            SubmitButtonText="Create Ticket"
-            OnValidSubmit="CreateTicket"
-            OnFilesChanged="OnFilesChanged" />
-
-@if (!string.IsNullOrWhiteSpace(errorMessage))
-{
-    <div class="alert alert-danger mt-3">@errorMessage</div>
-}
+<TicketForm TicketModel="newTicket" IsCreateMode="true" SubmitButtonText="Create Ticket" OnValidSubmit="CreateTicket" />
 
 @code {
     private Ticket newTicket = new();
-    private IReadOnlyList<IBrowserFile> selectedFiles = Array.Empty<IBrowserFile>();
-    private string? errorMessage;
 
-    private Task OnFilesChanged(IReadOnlyList<IBrowserFile> files)
+    private async Task CreateTicket(TicketFormSubmission submission)
     {
-        selectedFiles = files;
-        return Task.CompletedTask;
-    }
+        await TicketService.CreateTicketAsync(submission.Ticket);
+        await TicketAttachmentService.ApplyChangesAsync(
+            submission.Ticket.Id,
+            submission.NewFiles,
+            submission.AttachmentIdsToDelete);
 
-    private async Task CreateTicket()
-    {
-        errorMessage = null;
-
-        try
-        {
-            await TicketService.CreateTicketAsync(newTicket);
-            await TicketAttachmentService.AddAttachmentsAsync(newTicket.Id, selectedFiles);
-            Nav.NavigateTo($"/tickets/{newTicket.Id}");
-        }
-        catch (Exception exception)
-        {
-            errorMessage = exception is InvalidOperationException or UnauthorizedAccessException
-                ? exception.Message
-                : "The ticket could not be created. Please try again.";
-        }
+        Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
     }
 }

@@ -61,15 +61,17 @@
         <div class="card mb-4 shadow-sm border-0">
           <div class="card-body">
             <h5 class="card-title">Attachments (@ticket.Attachments.Count)</h5>
-            <div class="list-group">
-              @foreach (var attachment in ticket.Attachments.OrderBy(a => a.Id))
+            <div class="list-group list-group-flush">
+              @foreach (var attachment in ticket.Attachments)
               {
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                   href="/tickets/@ticket.Id/attachments/@attachment.Id"
-                   target="_blank">
-                  <span>@attachment.OriginalFileName</span>
-                  <small class="text-muted">@FormatFileSize(attachment.FileSize)</small>
-                </a>
+                <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                  <div>
+                    <span class="fw-semibold">@attachment.OriginalFileName</span>
+                    <small class="text-muted ms-2">@FormatFileSize(attachment.FileSize)</small>
+                  </div>
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="/tickets/@ticket.Id/attachments/@attachment.Id">Download</a>
+                </div>
               }
             </div>
           </div>
@@ -137,11 +139,7 @@
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (!firstRender)
-    {
-      return;
-    }
-
+    if (!firstRender) return;
     await BrowserTimeZone.InitializeAsync();
     await InvokeAsync(StateHasChanged);
   }
@@ -169,14 +167,14 @@
     await LoadTicketAsync();
   }
 
-  private static string FormatFileSize(long bytes)
-  {
-    if (bytes < 1024) return $"{bytes} B";
-    if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
-    return $"{bytes / (1024d * 1024):0.#} MB";
-  }
-
   private Task CopyTicketLink() => JS.InvokeVoidAsync("navigator.clipboard.writeText", NavigationManager.Uri).AsTask();
+
+  private static string FormatFileSize(long bytes) => bytes switch
+  {
+    >= 1024 * 1024 => $"{bytes / 1024d / 1024d:0.##} MB",
+    >= 1024 => $"{bytes / 1024d:0.##} KB",
+    _ => $"{bytes} B"
+  };
 
   public void Dispose()
   {

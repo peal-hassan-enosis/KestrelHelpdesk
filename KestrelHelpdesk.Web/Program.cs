@@ -27,11 +27,11 @@ builder.Services.AddMudServices();
 
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+builder.Services.AddScoped<ITicketAttachmentRepository, TicketAttachmentRepository>();
 builder.Services.AddScoped<IExcelTicketImportService, ExcelTicketImportService>();
 builder.Services.AddScoped<ITicketPdfService, TicketPdfService>();
 builder.Services.AddScoped<ITicketAttachmentService, TicketAttachmentService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
-builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
 builder.Services.AddScoped<ICurrentUserContext, IdentityCurrentUserContext>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
 builder.Services.AddScoped<BrowserTimeZoneService>();
@@ -87,17 +87,30 @@ app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapHealthChecks("/health");
-
 app.MapGet("/tickets/{ticketId:int}/attachments/{attachmentId:int}", async (
     int ticketId,
     int attachmentId,
     ITicketAttachmentService attachmentService,
     CancellationToken cancellationToken) =>
 {
-    var result = await attachmentService.OpenAttachmentAsync(ticketId, attachmentId, cancellationToken);
-    return Results.File(result.Content, result.Attachment.ContentType, result.Attachment.OriginalFileName);
+    try
+    {
+        var download = await attachmentService.OpenDownloadAsync(ticketId, attachmentId, cancellationToken);
+        return Results.File(download.Content, download.ContentType, download.FileName);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (KeyNotFoundException)
+    {
+        return Results.NotFound();
+    }
+    catch (FileNotFoundException)
+    {
+        return Results.NotFound();
+    }
 }).RequireAuthorization();
-
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapAdditionalIdentityEndpoints();
 

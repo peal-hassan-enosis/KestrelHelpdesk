@@ -1,5 +1,7 @@
 @inject IJSRuntime JS
+@inject ITicketAttachmentService TicketAttachmentService
 @implements IAsyncDisposable
+@using System.ComponentModel.DataAnnotations
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Components.Forms
 @using KestrelHelpdesk.Web.Services
@@ -67,48 +69,38 @@
 
   <div class="mb-4">
     <label class="form-label fw-bold">Attachments</label>
+    <InputFile OnChange="HandleFilesSelected" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" />
+    <div class="form-text">Maximum 3 files, 10 MB per file.</div>
 
-    @if (ExistingAttachments.Count > 0)
+    @if (!string.IsNullOrWhiteSpace(attachmentError))
     {
-      <div class="list-group mb-2">
-        @foreach (var attachment in ExistingAttachments)
+      <div class="alert alert-danger mt-2 mb-2">@attachmentError</div>
+    }
+
+    @if (TicketModel.Attachments.Any())
+    {
+      <div class="mt-3">
+        <div class="fw-semibold mb-2">Existing attachments</div>
+        @foreach (var attachment in TicketModel.Attachments.Where(a => !attachmentsToDelete.Contains(a.Id)))
         {
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <span>
-              <a href="/tickets/@TicketModel.Id/attachments/@attachment.Id" target="_blank">@attachment.OriginalFileName</a>
-              <small class="text-muted ms-2">(@FormatFileSize(attachment.FileSize))</small>
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveExistingAttachmentAsync(attachment)">Delete</button>
+          <div class="d-flex align-items-center justify-content-between border rounded px-3 py-2 mb-2">
+            <span>@attachment.OriginalFileName (@FormatFileSize(attachment.FileSize))</span>
+            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => MarkAttachmentForDeletion(attachment.Id)">Delete</button>
           </div>
         }
       </div>
     }
 
-    @if (SelectedFiles.Count > 0)
+    @if (selectedFiles.Count > 0)
     {
-      <div class="list-group mb-2">
-        @foreach (var file in SelectedFiles)
+      <div class="mt-3">
+        <div class="fw-semibold mb-2">New attachments</div>
+        @foreach (var file in selectedFiles)
         {
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <span>@file.Name <small class="text-muted ms-2">(@FormatFileSize(file.Size))</small></span>
-            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveSelectedFile(file)">Remove</button>
+          <div class="border rounded px-3 py-2 mb-2">
+            @file.Name (@FormatFileSize(file.Size))
           </div>
         }
-      </div>
-    }
-
-    <InputFile OnChange="HandleFilesSelected" multiple class="form-control" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt,.zip" />
-    <small class="text-muted">Maximum 3 files per ticket, 10 MB per file. Allowed: PDF, images, Word, Excel, TXT and ZIP.</small>
-
-    @if (_attachmentErrors.Count > 0)
-    {
-      <div class="alert alert-danger mt-2 mb-0">
-        <ul class="mb-0">
-          @foreach (var error in _attachmentErrors)
-          {
-            <li>@error</li>
-          }
-        </ul>
       </div>
     }
   </div>
@@ -124,14 +116,12 @@
   [Parameter] public bool IsCreateMode { get; set; }
   [Parameter] public bool CanEditStatus { get; set; } = true;
   [Parameter] public string SubmitButtonText { get; set; } = "Save Ticket";
-  [Parameter] public EventCallback<Ticket> OnValidSubmit { get; set; }
-  [Parameter] public IReadOnlyList<TicketAttachment> ExistingAttachments { get; set; } = Array.Empty<TicketAttachment>();
-  [Parameter] public EventCallback<TicketAttachment> OnExistingAttachmentRemoved { get; set; }
-  [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> OnFilesChanged { get; set; }
+  [Parameter] public EventCallback<TicketFormSubmission> OnValidSubmit { get; set; }
 
-  private readonly List<IBrowserFile> SelectedFiles = new();
-  private readonly List<string> _attachmentErrors = new();
   private IJSObjectReference? module;
+  private List<IBrowserFile> selectedFiles = new();
+  private HashSet<int> attachmentsToDelete = new();
+  private string? attachmentError;
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -140,57 +130,70 @@
     await module.InvokeVoidAsync("focusElement", "ticket-title");
   }
 
-  private async Task HandleFilesSelected(InputFileChangeEventArgs args)
+  private void HandleFilesSelected(InputFileChangeEventArgs e)
   {
-    _attachmentErrors.Clear();
+    attachmentError = null;
+    selectedFiles = e.GetMultipleFiles(TicketAttachmentService.MaxFilesPerTicket + 1).ToList();
 
-    if (args.FileCount == 0)
-      return;
-
-    if (args.FileCount > TicketAttachmentValidation.MaxAttachmentsPerTicket)
+    var finalCount = TicketModel.Attachments.Count - attachmentsToDelete.Count + selectedFiles.Count;
+    if (selectedFiles.Count > TicketAttachmentService.MaxFilesPerTicket || finalCount > TicketAttachmentService.MaxFilesPerTicket)
     {
-      _attachmentErrors.Add("You can select a maximum of 3 files.");
+      selectedFiles.Clear();
+      attachmentError = "A ticket can have a maximum of 3 attachments.";
       return;
     }
 
-    var files = args.GetMultipleFiles(TicketAttachmentValidation.MaxAttachmentsPerTicket);
-    var errors = TicketAttachmentValidation.ValidateFiles(files, ExistingAttachments.Count);
-    if (errors.Count > 0)
+    var oversized = selectedFiles.FirstOrDefault(f => f.Size > TicketAttachmentService.MaxFileSize);
+    if (oversized is not null)
     {
-      _attachmentErrors.AddRange(errors);
-      return;
+      selectedFiles.Clear();
+      attachmentError = $"{oversized.Name} exceeds the 10 MB file size limit.";
     }
-
-    SelectedFiles.Clear();
-    SelectedFiles.AddRange(files);
-    await OnFilesChanged.InvokeAsync(SelectedFiles.ToArray());
   }
 
-  private async Task RemoveSelectedFile(IBrowserFile file)
+  private void MarkAttachmentForDeletion(int attachmentId)
   {
-    SelectedFiles.Remove(file);
-    _attachmentErrors.Clear();
-    await OnFilesChanged.InvokeAsync(SelectedFiles.ToArray());
-  }
-
-  private async Task RemoveExistingAttachmentAsync(TicketAttachment attachment)
-  {
-    if (OnExistingAttachmentRemoved.HasDelegate)
-      await OnExistingAttachmentRemoved.InvokeAsync(attachment);
-  }
-
-  private static string FormatFileSize(long bytes)
-  {
-    if (bytes < 1024) return $"{bytes} B";
-    if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
-    return $"{bytes / (1024d * 1024):0.#} MB";
+    attachmentsToDelete.Add(attachmentId);
+    attachmentError = null;
   }
 
   private async Task HandleValidSubmit()
   {
-    if (OnValidSubmit.HasDelegate)
-      await OnValidSubmit.InvokeAsync(TicketModel);
+    attachmentError = null;
+
+    try
+    {
+      var errors = await TicketAttachmentService.ValidateFilesAsync(
+          IsCreateMode ? 0 : TicketModel.Id,
+          selectedFiles,
+          attachmentsToDelete);
+
+      if (errors.Count > 0)
+      {
+        attachmentError = string.Join(" ", errors);
+        return;
+      }
+
+      if (OnValidSubmit.HasDelegate)
+      {
+        await OnValidSubmit.InvokeAsync(new TicketFormSubmission(
+            TicketModel,
+            selectedFiles,
+            attachmentsToDelete.ToArray()));
+      }
+    }
+    catch (ValidationException ex)
+    {
+      attachmentError = ex.Message;
+    }
   }
+
+  private static string FormatFileSize(long bytes) => bytes switch
+  {
+    >= 1024 * 1024 => $"{bytes / 1024d / 1024d:0.##} MB",
+    >= 1024 => $"{bytes / 1024d:0.##} KB",
+    _ => $"{bytes} B"
+  };
 
   public async ValueTask DisposeAsync()
   {

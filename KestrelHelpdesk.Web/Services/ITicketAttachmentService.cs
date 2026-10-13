@@ -1,22 +1,23 @@
-using KestrelHelpdesk.Core.Models;
 using Microsoft.AspNetCore.Components.Forms;
+using KestrelHelpdesk.Core.Models;
 
 namespace KestrelHelpdesk.Web.Services;
 
 public interface ITicketAttachmentService
 {
-    const int MaxAttachmentsPerTicket = TicketAttachmentValidation.MaxAttachmentsPerTicket;
-    const long MaxFileSize = TicketAttachmentValidation.MaxFileSize;
-
-    Task<IReadOnlyList<TicketAttachment>> AddAttachmentsAsync(
+    Task<IReadOnlyList<string>> ValidateFilesAsync(
         int ticketId,
         IReadOnlyList<IBrowserFile> files,
-        int existingAttachmentCount = 0,
+        IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default);
 
-    Task DeleteAttachmentAsync(int ticketId, int attachmentId, CancellationToken cancellationToken = default);
+    Task ApplyChangesAsync(
+        int ticketId,
+        IReadOnlyList<IBrowserFile> files,
+        IReadOnlyCollection<int> attachmentIdsToDelete,
+        CancellationToken cancellationToken = default);
 
-    Task<(TicketAttachment Attachment, Stream Content)> OpenAttachmentAsync(
+    Task<(Stream Content, string ContentType, string FileName)> OpenDownloadAsync(
         int ticketId,
         int attachmentId,
         CancellationToken cancellationToken = default);

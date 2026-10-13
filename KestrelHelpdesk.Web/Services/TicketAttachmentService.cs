@@ -1,133 +1,174 @@
-using KestrelHelpdesk.Core.Authorization;
-using KestrelHelpdesk.Core.Models;
-using KestrelHelpdesk.Infrastructure.Data;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.EntityFrameworkCore;
+using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Interfaces;
+using KestrelHelpdesk.Core.Models;
 
 namespace KestrelHelpdesk.Web.Services;
 
 public sealed class TicketAttachmentService : ITicketAttachmentService
 {
-    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-    private readonly IFileStorageService _fileStorage;
-    private readonly Core.Interfaces.ITicketService _ticketService;
+    public const long MaxFileSize = 10 * 1024 * 1024;
+    public const int MaxFilesPerTicket = 3;
+
+    private static readonly IReadOnlyDictionary<string, string> AllowedContentTypes =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [".pdf"] = "application/pdf",
+            [".png"] = "image/png",
+            [".jpg"] = "image/jpeg",
+            [".jpeg"] = "image/jpeg",
+            [".gif"] = "image/gif",
+            [".webp"] = "image/webp",
+            [".txt"] = "text/plain",
+            [".csv"] = "text/csv",
+            [".doc"] = "application/msword",
+            [".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            [".xls"] = "application/vnd.ms-excel",
+            [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            [".ppt"] = "application/vnd.ms-powerpoint",
+            [".pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            [".zip"] = "application/zip"
+        };
+
+    private readonly ITicketService _ticketService;
+    private readonly ITicketAttachmentRepository _repository;
+    private readonly IFileStorageService _storage;
     private readonly ICurrentUserContext _currentUser;
 
     public TicketAttachmentService(
-        IDbContextFactory<ApplicationDbContext> dbFactory,
-        IFileStorageService fileStorage,
-        Core.Interfaces.ITicketService ticketService,
+        ITicketService ticketService,
+        ITicketAttachmentRepository repository,
+        IFileStorageService storage,
         ICurrentUserContext currentUser)
     {
-        _dbFactory = dbFactory;
-        _fileStorage = fileStorage;
         _ticketService = ticketService;
+        _repository = repository;
+        _storage = storage;
         _currentUser = currentUser;
     }
 
-    public async Task<IReadOnlyList<TicketAttachment>> AddAttachmentsAsync(
+    public async Task<IReadOnlyList<string>> ValidateFilesAsync(
         int ticketId,
         IReadOnlyList<IBrowserFile> files,
-        int existingAttachmentCount = 0,
+        IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default)
     {
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId)
-            ?? throw new UnauthorizedAccessException("You are not allowed to modify this ticket.");
-        var user = await _currentUser.GetCurrentUserAsync()
-            ?? throw new UnauthorizedAccessException("You must be signed in.");
+        Ticket? ticket = null;
+        if (ticketId > 0)
+        {
+            ticket = await _ticketService.GetTicketByIdAsync(ticketId);
+            if (ticket is null)
+                throw new ValidationException("The ticket does not exist or you do not have access to it.");
+        }
 
-        var validationErrors = TicketAttachmentValidation.ValidateFiles(files, existingAttachmentCount);
+        var existingAttachments = ticket?.Attachments ?? [];
+        var existingIds = existingAttachments.Select(a => a.Id).ToHashSet();
+        var invalidDeleteIds = attachmentIdsToDelete.Where(id => !existingIds.Contains(id)).ToList();
+        if (invalidDeleteIds.Count > 0)
+            throw new ValidationException("One or more attachments selected for deletion are invalid.");
+
+        var finalCount = existingAttachments.Count - attachmentIdsToDelete.Count + files.Count;
+        if (finalCount > MaxFilesPerTicket)
+            throw new ValidationException($"A ticket can have a maximum of {MaxFilesPerTicket} attachments.");
+
+        var errors = new List<string>();
+        foreach (var file in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var originalName = Path.GetFileName(file.Name);
+            var extension = Path.GetExtension(originalName);
+
+            if (!AllowedContentTypes.ContainsKey(extension))
+                errors.Add($"{originalName}: file type '{extension}' is not allowed.");
+
+            if (file.Size > MaxFileSize)
+                errors.Add($"{originalName}: file size cannot exceed 10 MB.");
+        }
+
+        return errors;
+    }
+
+    public async Task ApplyChangesAsync(
+        int ticketId,
+        IReadOnlyList<IBrowserFile> files,
+        IReadOnlyCollection<int> attachmentIdsToDelete,
+        CancellationToken cancellationToken = default)
+    {
+        var validationErrors = await ValidateFilesAsync(ticketId, files, attachmentIdsToDelete, cancellationToken);
         if (validationErrors.Count > 0)
-            throw new InvalidOperationException(string.Join(" ", validationErrors));
+            throw new ValidationException(string.Join(" ", validationErrors));
 
-        if (files.Count == 0)
-            return Array.Empty<TicketAttachment>();
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId)
+            ?? throw new ValidationException("The ticket does not exist or you do not have access to it.");
 
-        var created = new List<TicketAttachment>(files.Count);
-        var savedPaths = new List<string>(files.Count);
+        var currentUser = await _currentUser.GetCurrentUserAsync()
+            ?? throw new ValidationException("You must be signed in to manage attachments.");
+
+        var attachmentsToDelete = ticket.Attachments
+            .Where(a => attachmentIdsToDelete.Contains(a.Id))
+            .ToList();
+
+        var savedPaths = new List<string>();
+        var newAttachments = new List<TicketAttachment>();
 
         try
         {
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+                var originalName = Path.GetFileName(file.Name);
+                var extension = Path.GetExtension(originalName);
 
-                await using var source = file.OpenReadStream(TicketAttachmentValidation.MaxFileSize, cancellationToken);
-                var storagePath = await _fileStorage.SaveAsync(source, extension, cancellationToken);
-                savedPaths.Add(storagePath);
+                await using var source = file.OpenReadStream(MaxFileSize, cancellationToken);
+                var storedFileName = await _storage.SaveAsync(source, extension, cancellationToken);
+                savedPaths.Add(storedFileName);
 
-                created.Add(new TicketAttachment
+                newAttachments.Add(new TicketAttachment
                 {
-                    TicketId = ticket.Id,
-                    OriginalFileName = file.Name,
-                    StoredFileName = storagePath,
-                    ContentType = file.ContentType,
+                    TicketId = ticketId,
+                    OriginalFileName = originalName.Length > 255 ? originalName[..255] : originalName,
+                    StoredFileName = storedFileName,
+                    ContentType = AllowedContentTypes[extension],
                     FileSize = file.Size,
-                    StoragePath = storagePath,
-                    UploadedByUserId = user.UserId,
+                    StoragePath = storedFileName,
+                    UploadedByUserId = currentUser.UserId,
                     UploadedAt = DateTime.UtcNow
                 });
             }
 
-            await using var context = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            context.TicketAttachments.AddRange(created);
-            await context.SaveChangesAsync(cancellationToken);
-            return created;
+            await _repository.AddRangeAsync(newAttachments, cancellationToken);
+            await _repository.DeleteRangeAsync(attachmentsToDelete, cancellationToken);
+
+            foreach (var attachment in attachmentsToDelete)
+                await _storage.DeleteAsync(attachment.StoragePath, cancellationToken);
         }
         catch
         {
             foreach (var path in savedPaths)
             {
-                try
-                {
-                    await _fileStorage.DeleteAsync(path, cancellationToken);
-                }
-                catch
-                {
-                    // Preserve the original upload/database exception.
-                }
+                try { await _storage.DeleteAsync(path, CancellationToken.None); }
+                catch { }
             }
 
             throw;
         }
     }
 
-    public async Task DeleteAttachmentAsync(int ticketId, int attachmentId, CancellationToken cancellationToken = default)
-    {
-        _ = await _ticketService.GetTicketByIdAsync(ticketId)
-            ?? throw new UnauthorizedAccessException("You are not allowed to modify this ticket.");
-
-        await using var context = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var attachment = await context.TicketAttachments
-            .FirstOrDefaultAsync(a => a.Id == attachmentId && a.TicketId == ticketId, cancellationToken);
-
-        if (attachment is null)
-            throw new KeyNotFoundException("The attachment was not found.");
-
-        context.TicketAttachments.Remove(attachment);
-        await context.SaveChangesAsync(cancellationToken);
-
-        await _fileStorage.DeleteAsync(attachment.StoragePath, cancellationToken);
-    }
-
-    public async Task<(TicketAttachment Attachment, Stream Content)> OpenAttachmentAsync(
+    public async Task<(Stream Content, string ContentType, string FileName)> OpenDownloadAsync(
         int ticketId,
         int attachmentId,
         CancellationToken cancellationToken = default)
     {
-        _ = await _ticketService.GetTicketByIdAsync(ticketId)
-            ?? throw new UnauthorizedAccessException("You are not allowed to view this ticket.");
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
+        if (ticket is null)
+            throw new UnauthorizedAccessException();
 
-        await using var context = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var attachment = await context.TicketAttachments
-            .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == attachmentId && a.TicketId == ticketId, cancellationToken);
-
+        var attachment = ticket.Attachments.FirstOrDefault(a => a.Id == attachmentId);
         if (attachment is null)
-            throw new KeyNotFoundException("The attachment was not found.");
+            throw new KeyNotFoundException();
 
-        var content = await _fileStorage.OpenReadAsync(attachment.StoragePath, cancellationToken);
-        return (attachment, content);
+        var stream = await _storage.OpenReadAsync(attachment.StoragePath, cancellationToken);
+        return (stream, attachment.ContentType, attachment.OriginalFileName);
     }
 }
