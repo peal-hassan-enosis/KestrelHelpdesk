@@ -52,8 +52,20 @@ else
       }
       else
       {
-        <main class="content px-4">
-          @Body
+        <main>
+          <div class="top-row px-4 d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Kestrel Helpdesk</span>
+
+            <form action="/Account/Logout" method="post" class="d-inline">
+              <AntiforgeryToken />
+              <input type="hidden" name="returnUrl" value="" />
+              <button type="submit" class="btn btn-sm btn-outline-danger">Log out</button>
+            </form>
+          </div>
+
+          <article class="content px-4">
+            @Body
+          </article>
         </main>
       }
     </Authorized>
