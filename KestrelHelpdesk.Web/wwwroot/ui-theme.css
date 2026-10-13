@@ -250,3 +250,12 @@ textarea.form-control{min-height:116px;resize:vertical}.form-control::placeholde
 .priority-default { color:#596579; border-color:#dbe2eb; background:#f3f5f8; }
 .request-id-line { display:inline-flex; flex-wrap:wrap; justify-content:center; gap:7px; margin:5px 0 0; padding:8px 11px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:#f7f9fc; font-size:11px; }
 .request-id-line code { color:var(--brand-700); overflow-wrap:anywhere; }
+
+.import-upload-card { padding:clamp(18px,3vw,28px)!important; }
+.import-file-panel { margin-top:15px; }
+.import-file-input { max-width:250px; }
+.selected-file-row { display:flex; align-items:center; gap:11px; padding:12px 14px; border:1px solid #c9ebdc; border-radius:11px; color:#315c4b; background:#f0fbf6; }
+.selected-file-check { display:grid; width:28px; height:28px; flex:0 0 28px; place-items:center; border-radius:50%; color:#0c805b; background:#d9f5e8; font-size:12px; font-weight:900; }
+.selected-file-row strong,.selected-file-row small { display:block; overflow-wrap:anywhere; }
+.selected-file-row strong { font-size:11px; font-weight:750; }
+.selected-file-row small { margin-top:3px; color:#5d8a77; font-size:10px; }
