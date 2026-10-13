@@ -5,10 +5,8 @@ namespace KestrelHelpdesk.Web.Services;
 
 public interface ITicketAttachmentService
 {
-    const int MaxAttachmentsPerTicket = 3;
-    const long MaxFileSize = 10 * 1024 * 1024;
-
-    IReadOnlyList<string> ValidateFiles(IReadOnlyList<IBrowserFile> files, int existingAttachmentCount = 0);
+    const int MaxAttachmentsPerTicket = TicketAttachmentValidation.MaxAttachmentsPerTicket;
+    const long MaxFileSize = TicketAttachmentValidation.MaxFileSize;
 
     Task<IReadOnlyList<TicketAttachment>> AddAttachmentsAsync(
         int ticketId,
