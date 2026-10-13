@@ -103,7 +103,7 @@ else if (!isAuthenticated)
                 user.IsInRole(AppRoles.Agent) ||
                 user.IsInRole(AppRoles.Employee);
 
-            NavigationManager.NavigateTo(hasApplicationRole ? "/tickets" : "/pending-role", replace: true);
+            NavigationManager.NavigateTo(hasApplicationRole ? "/dashboard" : "/pending-role", replace: true);
             return;
         }
 
