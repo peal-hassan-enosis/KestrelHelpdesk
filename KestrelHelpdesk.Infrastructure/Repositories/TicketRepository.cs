@@ -66,6 +66,24 @@ public class TicketRepository : ITicketRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task CreateTicketsAsync(IReadOnlyList<Ticket> tickets, CancellationToken cancellationToken = default)
+    {
+        using var context = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            context.Tickets.AddRange(tickets);
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
     public async Task UpdateTicketAsync(Ticket ticket)
     {
         using var context = await _factory.CreateDbContextAsync();
