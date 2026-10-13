@@ -71,9 +71,9 @@
         <CellTemplate>@(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(context.Item.CreatedAt) : "Loading local time...")</CellTemplate>
       </PropertyColumn>
       <TemplateColumn Title="Assignment" Sortable="false">
-        <CellTemplate>
+        <CellTemplate Context="cell">
           <AuthorizeView Roles="Manager">
-            <select class="form-select form-select-sm" value="@context.Item.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(context.Item.Id, e)">
+            <select class="form-select form-select-sm" value="@cell.Item.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(cell.Item.Id, e)">
               <option value="">Unassigned</option>
               @foreach (var agent in agents)
               {
@@ -84,13 +84,13 @@
           <AuthorizeView Roles="Agent">
             @if (activeScope == TicketScope.AgentCreated)
             {
-              @if (context.Item.AssignedToUserId == currentUserId)
+              @if (cell.Item.AssignedToUserId == currentUserId)
               {
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default" OnClick="() => AssignToMe(context.Item.Id, null)">Unassign</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default" OnClick="() => AssignToMe(cell.Item.Id, null)">Unassign</MudButton>
               }
               else
               {
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => AssignToMe(context.Item.Id, currentUserId)">Assign to Me</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => AssignToMe(cell.Item.Id, currentUserId)">Assign to Me</MudButton>
               }
             }
           </AuthorizeView>
