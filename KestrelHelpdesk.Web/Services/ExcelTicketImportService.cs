@@ -9,14 +9,14 @@ namespace KestrelHelpdesk.Web.Services;
 public sealed class ExcelTicketImportService : IExcelTicketImportService
 {
     private const int MaxRows = 10_000;
-    private readonly ITicketService _ticketService;
+    private readonly ITicketImportService _ticketImportService;
     private readonly ICurrentUserContext _currentUser;
 
     public ExcelTicketImportService(
-        ITicketService ticketService,
+        ITicketImportService ticketImportService,
         ICurrentUserContext currentUser)
     {
-        _ticketService = ticketService;
+        _ticketImportService = ticketImportService;
         _currentUser = currentUser;
     }
 
@@ -30,9 +30,6 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
 
         try
         {
-            // IBrowserFile.OpenReadStream returns a stream that supports asynchronous
-            // reads only. NPOI's XSSFWorkbook constructor performs synchronous reads,
-            // so first copy the uploaded stream into a seekable MemoryStream.
             await using var memoryStream = new MemoryStream();
             await excelStream.CopyToAsync(memoryStream, cancellationToken);
             memoryStream.Position = 0;
@@ -133,12 +130,17 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
 
             if (errors.Count == 0)
             {
-                var serviceErrors = await _ticketService.ValidateImportRowsAsync(rows, ignoreAssignments: true, cancellationToken);
+                var serviceErrors = await _ticketImportService.ValidateImportRowsAsync(
+                    rows,
+                    ignoreAssignments: true,
+                    cancellationToken);
                 errors.AddRange(serviceErrors);
             }
 
             var user = await _currentUser.GetCurrentUserAsync();
-            var requiresAssignmentConfirmation = hasAssignedToColumn && user is not null && !user.IsInRole(AppRoles.Manager);
+            var requiresAssignmentConfirmation = hasAssignedToColumn
+                && user is not null
+                && !user.IsInRole(AppRoles.Manager);
 
             return new TicketImportValidationResult
             {
@@ -159,7 +161,7 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
         IReadOnlyList<TicketImportRow> rows,
         bool ignoreAssignments,
         CancellationToken cancellationToken = default) =>
-        _ticketService.ImportTicketsAsync(rows, ignoreAssignments, cancellationToken);
+        _ticketImportService.ImportTicketsAsync(rows, ignoreAssignments, cancellationToken);
 
     private static string NormalizeHeader(string value) =>
         new string(value.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
