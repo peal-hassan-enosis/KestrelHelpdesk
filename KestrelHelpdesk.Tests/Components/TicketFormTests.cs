@@ -4,6 +4,7 @@ using KestrelHelpdesk.Web.Components.Pages;
 using KestrelHelpdesk.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using System.Security.Claims;
 using Xunit;
 
 namespace KestrelHelpdesk.Tests.Components;
@@ -73,6 +74,7 @@ public class TicketFormTests : BunitContext
         public Task<(Stream Content, string ContentType, string FileName)> OpenDownloadAsync(
             int ticketId,
             int attachmentId,
+            ClaimsPrincipal user,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
