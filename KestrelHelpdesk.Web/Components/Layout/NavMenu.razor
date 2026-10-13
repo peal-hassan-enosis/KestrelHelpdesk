@@ -1,83 +1,25 @@
 @using KestrelHelpdesk.Core.Authorization
-@inject NavigationManager NavigationManager
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-  <nav class="flex-column">
-    <AuthorizeView Roles="Employee,Agent,Manager">
-      <Authorized>
-        <div class="nav-item px-3">
-          <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span>
-            Home
-          </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-          <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
-            <span class="bi bi-bar-chart-fill-nav-menu" aria-hidden="true"></span>
-            Dashboard
-          </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-          <NavLink class="nav-link" href="tickets" Match="NavLinkMatch.All">
-            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span>
-            Ticket Board
-          </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-          <NavLink class="nav-link" href="tickets/new" Match="NavLinkMatch.All">
-            <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span>
-            New Ticket
-          </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-          <NavLink class="nav-link" href="tickets/import-excel" Match="NavLinkMatch.All">
-            <span class="bi bi-file-earmark-spreadsheet-fill" aria-hidden="true"></span>
-            Import Excel
-          </NavLink>
-        </div>
-      </Authorized>
-    </AuthorizeView>
-
+<nav class="sidebar-navigation" aria-label="Main navigation">
+    <div class="nav-section-label">WORKSPACE</div>
+    <NavLink class="sidebar-nav-link" href="dashboard" Match="NavLinkMatch.All">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 5-7" /></svg><span>Dashboard</span>
+    </NavLink>
+    <NavLink class="sidebar-nav-link" href="tickets" Match="NavLinkMatch.All">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 9h8M8 13h5" /></svg><span>Ticket board</span>
+    </NavLink>
+    <NavLink class="sidebar-nav-link" href="tickets/new" Match="NavLinkMatch.All">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 8v8M8 12h8" /></svg><span>New ticket</span>
+    </NavLink>
+    <NavLink class="sidebar-nav-link" href="tickets/import-excel" Match="NavLinkMatch.All">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h5M9 12l5 5m0-5-5 5" /></svg><span>Import Excel</span>
+    </NavLink>
     <AuthorizeView Roles="Manager">
-      <Authorized>
-        <div class="nav-item px-3">
-          <NavLink class="nav-link" href="role-assignment" Match="NavLinkMatch.All">
-            <span class="bi bi-person-gear" aria-hidden="true"></span>
-            Role Assignment
-          </NavLink>
-        </div>
-      </Authorized>
+        <Authorized>
+            <div class="nav-section-label nav-section-label-spaced">ADMINISTRATION</div>
+            <NavLink class="sidebar-nav-link" href="role-assignment" Match="NavLinkMatch.All">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3" /><path d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19M17 8v6m-3-3h6" /></svg><span>Role assignment</span>
+            </NavLink>
+        </Authorized>
     </AuthorizeView>
-  </nav>
-</div>
-
-@code {
-  private string? currentUrl;
-
-  protected override void OnInitialized()
-  {
-    currentUrl = NavigationManager.ToBaseRelativePath(
-        NavigationManager.Uri);
-
-    NavigationManager.LocationChanged += OnLocationChanged;
-  }
-
-  private void OnLocationChanged(
-      object? sender,
-      LocationChangedEventArgs e)
-  {
-    currentUrl = NavigationManager.ToBaseRelativePath(
-        e.Location);
-
-    StateHasChanged();
-  }
-
-  public void Dispose()
-  {
-    NavigationManager.LocationChanged -= OnLocationChanged;
-  }
-}
+</nav>
