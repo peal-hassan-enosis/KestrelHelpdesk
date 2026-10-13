@@ -1,4 +1,4 @@
-﻿namespace KestrelHelpdesk.Core.Models;
+namespace KestrelHelpdesk.Core.Models;
 
 using System.ComponentModel.DataAnnotations;
 
@@ -26,6 +26,8 @@ public class Ticket
     public TicketStatus Status { get; set; }
 
     public List<Comment> Comments { get; set; } = new();
+
+    public List<TicketAttachment> Attachments { get; set; } = new();
 
     // Identity user id of the creator.
     public string CreatedBy { get; set; } = string.Empty;
