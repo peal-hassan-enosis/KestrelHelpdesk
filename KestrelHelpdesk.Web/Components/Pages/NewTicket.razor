@@ -12,10 +12,16 @@
 
 <PageTitle>Create New Ticket</PageTitle>
 
-<h3>Create Ticket</h3>
-<p class="text-muted">New tickets are always created with Open status.</p>
-
-<TicketForm TicketModel="newTicket" IsCreateMode="true" SubmitButtonText="Create Ticket" OnValidSubmit="CreateTicket" />
+<div class="page-shell page-shell-narrow ticket-create-page">
+    <header class="page-header">
+        <p class="eyebrow">NEW REQUEST</p>
+        <h1 class="page-title">Create a ticket</h1>
+        <p class="page-subtitle">Describe the issue, choose a category and priority, and add any helpful attachments. New tickets start as Open.</p>
+    </header>
+    <div class="surface-card form-surface">
+        <TicketForm TicketModel="newTicket" IsCreateMode="true" SubmitButtonText="Create ticket" OnValidSubmit="CreateTicket" />
+    </div>
+</div>
 
 @code {
     private Ticket newTicket = new();
