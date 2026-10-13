@@ -6,23 +6,39 @@
 @using KestrelHelpdesk.Web.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
 @inject ITicketService TicketService
 @inject ITicketEventService TicketEvents
+@inject ITicketPdfService TicketPdfService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject BrowserTimeZoneService BrowserTimeZone
+@inject IJSRuntime JS
 
 @attribute [Authorize]
 @rendermode InteractiveServer
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>Tickets - Kestrel Helpdesk</PageTitle>
 
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
   <MudText Typo="Typo.h5">Ticket Board</MudText>
-  <AuthorizeView Roles="Employee, Agent, Manager">
-    <MudButton Href="/tickets/new" Variant="Variant.Filled" Color="Color.Primary">Create Ticket</MudButton>
-  </AuthorizeView>
+  <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+    <AuthorizeView Roles="Employee, Agent, Manager">
+      <MudMenu Label="Export"
+               Variant="Variant.Outlined"
+               Color="Color.Secondary"
+               Disabled="@exporting">
+        <MudMenuItem Label="Current page"
+                     Icon="@Icons.Material.Filled.Description"
+                     OnClick="ExportCurrentPageAsync" />
+        <MudMenuItem Label="All tickets"
+                     Icon="@Icons.Material.Filled.Description"
+                     OnClick="ExportAllTicketsAsync" />
+      </MudMenu>
+      <MudButton Href="/tickets/new" Variant="Variant.Filled" Color="Color.Primary">Create Ticket</MudButton>
+    </AuthorizeView>
+  </MudStack>
 </MudStack>
 
 @if (isAgent)
@@ -145,14 +161,19 @@
   [SupplyParameterFromQuery(Name = "status")] public string? StatusQuery { get; set; }
   private MudDataGrid<Ticket>? grid;
   private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
+  private IReadOnlyList<Ticket> currentPageTickets = Array.Empty<Ticket>();
   private TicketScope activeScope = TicketScope.EmployeeOwn;
   private bool isAgent;
   private bool isManager;
   private bool notAssignedOnly;
+  private bool exporting;
   private string? currentUserId;
   private string searchText = string.Empty;
   private string searchTerm = string.Empty;
+  private string? currentSortBy;
+  private bool currentSortDescending;
   private CancellationTokenSource? searchDebounceCts;
+  private IJSObjectReference? pdfModule;
 
   protected override async Task OnInitializedAsync()
   {
@@ -180,6 +201,9 @@
   private async Task<GridData<Ticket>> LoadGridData(GridState<Ticket> state, CancellationToken cancellationToken)
   {
     var sort = state.SortDefinitions.FirstOrDefault();
+    currentSortBy = sort?.SortBy;
+    currentSortDescending = sort?.Descending ?? false;
+
     var (items, totalCount) = await TicketService.GetTicketGridDataAsync(
       state.Page,
       state.PageSize,
@@ -187,14 +211,75 @@
       searchTerm,
       activeScope,
       notAssignedOnly,
-      sort?.SortBy,
-      sort?.Descending ?? false);
+      currentSortBy,
+      currentSortDescending);
+
+    currentPageTickets = items;
 
     return new GridData<Ticket>
     {
       Items = items,
       TotalItems = totalCount
     };
+  }
+
+  private async Task ExportCurrentPageAsync()
+  {
+    await ExportTicketsAsync(currentPageTickets, "Current Page");
+  }
+
+  private async Task ExportAllTicketsAsync()
+  {
+    exporting = true;
+    try
+    {
+      var tickets = await TicketService.GetTicketsForExportAsync(
+        StatusQuery,
+        searchTerm,
+        activeScope,
+        notAssignedOnly,
+        currentSortBy,
+        currentSortDescending);
+
+      await ExportTicketsAsync(tickets, "All Tickets");
+    }
+    finally
+    {
+      exporting = false;
+    }
+  }
+
+  private async Task ExportTicketsAsync(IReadOnlyList<Ticket> tickets, string scopeLabel)
+  {
+    if (tickets.Count == 0)
+    {
+      return;
+    }
+
+    exporting = true;
+    try
+    {
+      var rows = tickets.Select(ticket => new TicketPdfRow(
+        ticket.Id,
+        ticket.Title,
+        GetStatusLabel(ticket.Status),
+        ticket.Priority.ToString(),
+        GetAssigneeName(ticket.AssignedToUserId),
+        BrowserTimeZone.IsInitialized
+          ? BrowserTimeZone.Format(ticket.CreatedAt)
+          : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))).ToList();
+
+      var pdfBytes = await TicketPdfService.GenerateAsync(rows, $"Ticket Board - {scopeLabel}");
+      pdfModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/pdf-export.js");
+
+      var base64 = Convert.ToBase64String(pdfBytes);
+      var fileName = $"tickets-{(scopeLabel == "Current Page" ? "current-page" : "all")}-{DateTime.Now:yyyyMMdd-HHmmss}.pdf";
+      await pdfModule.InvokeVoidAsync("downloadPdf", fileName, base64);
+    }
+    finally
+    {
+      exporting = false;
+    }
   }
 
   private async Task OnTicketChangedAsync(TicketChangedEventArgs eventArgs)
@@ -281,10 +366,22 @@
     _ => Color.Default
   };
 
-  public void Dispose()
+  public async ValueTask DisposeAsync()
   {
     searchDebounceCts?.Cancel();
     searchDebounceCts?.Dispose();
     TicketEvents.TicketChanged -= OnTicketChangedAsync;
+
+    if (pdfModule is not null)
+    {
+      try
+      {
+        await pdfModule.DisposeAsync();
+      }
+      catch (JSDisconnectedException)
+      {
+        // The circuit is already disconnected.
+      }
+    }
   }
 }
