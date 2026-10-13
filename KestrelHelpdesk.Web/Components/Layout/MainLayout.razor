@@ -1,49 +1,64 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
 
 <MudThemeProvider />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<div class="page">
-  <div class="sidebar">
-    <NavMenu />
-  </div>
-
-  <main>
-    <div class="top-row px-4 d-flex justify-content-between align-items-center">
-      <span class="fw-bold">Kestrel Helpdesk</span>
-
-      <AuthorizeView>
-        <Authorized Context="auth">
-          <div class="d-flex align-items-center gap-3">
-            <span class="small text-muted">
-              @auth.User.Identity?.Name
-              <span class="badge bg-secondary ms-1">@GetRole(auth.User)</span>
-            </span>
-
-            <a href="/Account/Manage" class="btn btn-sm btn-outline-secondary">Account</a>
-
-            <form action="/Account/Logout" method="post" class="d-inline">
-              <AntiforgeryToken />
-              <input type="hidden" name="returnUrl" value="" />
-              <button type="submit" class="btn btn-sm btn-outline-danger">Log out</button>
-            </form>
-          </div>
-        </Authorized>
-        <NotAuthorized>
-          <a href="/Account/Login" class="btn btn-sm btn-primary">Log in</a>
-        </NotAuthorized>
-      </AuthorizeView>
+@if (IsLoginPage)
+{
+  <main class="content px-4">
+    @Body
+  </main>
+}
+else
+{
+  <div class="page">
+    <div class="sidebar">
+      <NavMenu />
     </div>
 
-    <article class="content px-4">
-      @Body
-    </article>
-  </main>
-</div>
+    <main>
+      <div class="top-row px-4 d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Kestrel Helpdesk</span>
+
+        <AuthorizeView>
+          <Authorized Context="auth">
+            <div class="d-flex align-items-center gap-3">
+              <span class="small text-muted">
+                @auth.User.Identity?.Name
+                <span class="badge bg-secondary ms-1">@GetRole(auth.User)</span>
+              </span>
+
+              <a href="/Account/Manage" class="btn btn-sm btn-outline-secondary">Account</a>
+
+              <form action="/Account/Logout" method="post" class="d-inline">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">Log out</button>
+              </form>
+            </div>
+          </Authorized>
+          <NotAuthorized>
+            <a href="/Account/Login" class="btn btn-sm btn-primary">Log in</a>
+          </NotAuthorized>
+        </AuthorizeView>
+      </div>
+
+      <article class="content px-4">
+        @Body
+      </article>
+    </main>
+  </div>
+}
 
 @code {
+  private bool IsLoginPage =>
+    NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
+      .Split('?', '#')[0]
+      .StartsWith("Account/Login", StringComparison.OrdinalIgnoreCase);
+
   private static string GetRole(System.Security.Claims.ClaimsPrincipal user)
   {
     if (user.IsInRole("Manager")) return "Manager";
