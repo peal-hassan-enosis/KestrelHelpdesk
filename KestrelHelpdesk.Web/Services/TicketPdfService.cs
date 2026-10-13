@@ -10,7 +10,7 @@ namespace KestrelHelpdesk.Web.Services;
 
 public sealed class TicketPdfService : ITicketPdfService
 {
-    public Task<byte[]> GenerateAsync(
+    public byte[] Generate(
         IReadOnlyList<TicketPdfRow> rows,
         string title,
         CancellationToken cancellationToken = default)
@@ -58,7 +58,7 @@ public sealed class TicketPdfService : ITicketPdfService
         document.Add(table);
         document.Close();
 
-        return Task.FromResult(memoryStream.ToArray());
+        return memoryStream.ToArray();
     }
 
     private static void AddHeader(Table table, string value, PdfFont boldFont)
