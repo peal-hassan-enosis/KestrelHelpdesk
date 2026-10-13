@@ -1,5 +1,4 @@
 @page "/Account/Login"
-@page "/test-login"
 
 @using System.ComponentModel.DataAnnotations
 @using KestrelHelpdesk.Core.Authorization
@@ -82,26 +81,25 @@
         {
             Logger.LogInformation("User logged in.");
 
-            var hasApplicationRole =
-                HttpContext.User.IsInRole(AppRoles.Manager) ||
-                HttpContext.User.IsInRole(AppRoles.Agent) ||
-                HttpContext.User.IsInRole(AppRoles.Employee);
-
-            RedirectManager.RedirectTo(hasApplicationRole ? ReturnUrl : "pending-role");
+            // The current request principal is not refreshed by PasswordSignInAsync.
+            // Redirect and let the new authentication cookie establish the correct principal.
+            RedirectManager.RedirectTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
+            return;
         }
-        else if (result.RequiresTwoFactor)
+
+        if (result.IsNotAllowed)
+        {
+            errorMessage = "Error: This account is not allowed to sign in.";
+            return;
+        }
+
+        if (result.RequiresTwoFactor)
         {
             errorMessage = "Error: Two-factor authentication is not enabled for this application.";
+            return;
         }
-        else if (result.IsLockedOut)
-        {
-            Logger.LogWarning("User account locked out.");
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            errorMessage = "Error: Invalid login attempt.";
-        }
+
+        errorMessage = "Error: Invalid login attempt.";
     }
 
     private sealed class InputModel
