@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Forms;
-using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
 
@@ -33,20 +31,17 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         };
 
     private readonly ITicketService _ticketService;
-    private readonly ITicketRepository _ticketRepository;
     private readonly ITicketAttachmentRepository _repository;
     private readonly IFileStorageService _storage;
     private readonly ICurrentUserContext _currentUser;
 
     public TicketAttachmentService(
         ITicketService ticketService,
-        ITicketRepository ticketRepository,
         ITicketAttachmentRepository repository,
         IFileStorageService storage,
         ICurrentUserContext currentUser)
     {
         _ticketService = ticketService;
-        _ticketRepository = ticketRepository;
         _repository = repository;
         _storage = storage;
         _currentUser = currentUser;
@@ -60,9 +55,6 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
     {
         var existingAttachments = Array.Empty<TicketAttachment>();
 
-        // A new ticket has no database ID yet. Validate its new files without
-        // attempting to load ticket ID 0; access validation happens when the
-        // ticket is created and ApplyChangesAsync persists the attachments.
         if (ticketId > 0)
         {
             var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
@@ -172,41 +164,5 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
 
             throw;
         }
-    }
-
-    public async Task<(Stream Content, string ContentType, string FileName)> OpenDownloadAsync(
-        int ticketId,
-        int attachmentId,
-        ClaimsPrincipal user,
-        CancellationToken cancellationToken = default)
-    {
-        if (user.Identity?.IsAuthenticated != true)
-            throw new UnauthorizedAccessException();
-
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new UnauthorizedAccessException();
-
-        // This method is used by the HTTP download endpoint, not by a Razor
-        // component. Do not call TicketService.GetTicketByIdAsync here because
-        // that service resolves the Blazor AuthenticationStateProvider, which
-        // is unavailable for an ordinary HTTP request.
-        var ticket = await _ticketRepository.GetTicketByIdAsync(ticketId);
-        if (ticket is null)
-            throw new KeyNotFoundException($"Ticket {ticketId} was not found.");
-
-        var canView = user.IsInRole(AppRoles.Manager)
-            || ticket.CreatedBy == userId
-            || (user.IsInRole(AppRoles.Agent) && ticket.AssignedToUserId == userId);
-
-        if (!canView)
-            throw new UnauthorizedAccessException();
-
-        var attachment = (ticket.Attachments ?? []).FirstOrDefault(a => a.Id == attachmentId);
-        if (attachment is null)
-            throw new FileNotFoundException();
-
-        var stream = await _storage.OpenReadAsync(attachment.StoragePath, cancellationToken);
-        return (stream, attachment.ContentType, attachment.OriginalFileName);
     }
 }
