@@ -16,7 +16,10 @@ public sealed class LocalFileStorageService : IFileStorageService
         Directory.CreateDirectory(_rootPath);
     }
 
-    public async Task<string> SaveAsync(Stream source, string extension, CancellationToken cancellationToken = default)
+    public async Task<(string StoredFileName, string StoragePath)> SaveAsync(
+        Stream source,
+        string extension,
+        CancellationToken cancellationToken = default)
     {
         var storedFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
         var fullPath = GetFullPath(storedFileName);
@@ -30,7 +33,7 @@ public sealed class LocalFileStorageService : IFileStorageService
             useAsync: true);
 
         await source.CopyToAsync(destination, cancellationToken);
-        return storedFileName;
+        return (storedFileName, storedFileName);
     }
 
     public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken = default)
