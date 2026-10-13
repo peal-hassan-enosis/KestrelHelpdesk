@@ -6,6 +6,8 @@
 @using KestrelHelpdesk.Web.Services
 @using Microsoft.AspNetCore.Authorization
 @inject ITicketService TicketService
+@inject ITicketCommentService TicketCommentService
+@inject IUserDirectory UserDirectory
 @inject ITicketEventService TicketEvents
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
@@ -69,8 +71,7 @@
                     <span class="fw-semibold">@attachment.OriginalFileName</span>
                     <small class="text-muted ms-2">@FormatFileSize(attachment.FileSize)</small>
                   </div>
-                  <a class="btn btn-sm btn-outline-primary"
-                     href="/tickets/@ticket.Id/attachments/@attachment.Id">Download</a>
+                  <a class="btn btn-sm btn-outline-primary" href="/tickets/@ticket.Id/attachments/@attachment.Id">Download</a>
                 </div>
               }
             </div>
@@ -128,7 +129,7 @@
   protected override async Task OnInitializedAsync()
   {
     TicketEvents.TicketChanged += OnTicketChangedAsync;
-    agents = await TicketService.GetAgentsAsync();
+    agents = await UserDirectory.GetAgentsAsync();
     await LoadTicketAsync();
   }
 
@@ -162,7 +163,7 @@
   private async Task PostComment()
   {
     if (ticket is null || string.IsNullOrWhiteSpace(newComment.Text)) return;
-    await TicketService.AddCommentAsync(ticket.Id, newComment);
+    await TicketCommentService.AddCommentAsync(ticket.Id, newComment);
     newComment = new Comment();
     await LoadTicketAsync();
   }
