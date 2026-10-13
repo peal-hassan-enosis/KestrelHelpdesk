@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Forms;
 using KestrelHelpdesk.Core.Models;
 
@@ -24,5 +25,6 @@ public interface ITicketAttachmentService
     Task<(Stream Content, string ContentType, string FileName)> OpenDownloadAsync(
         int ticketId,
         int attachmentId,
+        ClaimsPrincipal user,
         CancellationToken cancellationToken = default);
 }
