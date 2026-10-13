@@ -2,7 +2,7 @@ namespace KestrelHelpdesk.Web.Services;
 
 public interface ITicketPdfService
 {
-    Task<byte[]> GenerateAsync(
+    byte[] Generate(
         IReadOnlyList<TicketPdfRow> rows,
         string title,
         CancellationToken cancellationToken = default);
