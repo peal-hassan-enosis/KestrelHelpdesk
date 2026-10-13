@@ -77,7 +77,6 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
                     HasAssignedToColumn = hasAssignedToColumn
                 };
 
-            var formatter = new DataFormatter();
             var lastRow = Math.Min(sheet.LastRowNum, headerRow.RowNum + MaxRows);
 
             for (var rowIndex = headerRow.RowNum + 1; rowIndex <= lastRow; rowIndex++)
@@ -156,7 +155,7 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
         _ticketService.ImportTicketsAsync(rows, ignoreAssignments, cancellationToken);
 
     private static string NormalizeHeader(string value) =>
-        new(value.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+        new string(value.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
 
     private static string GetCellText(ICell? cell) =>
         cell is null ? string.Empty : cell.ToString()?.Trim() ?? string.Empty;
