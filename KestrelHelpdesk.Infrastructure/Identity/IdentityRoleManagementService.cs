@@ -2,6 +2,7 @@ using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace KestrelHelpdesk.Infrastructure.Identity;
 
@@ -60,9 +61,9 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
         bool assignedOnly,
         CancellationToken cancellationToken)
     {
-        var users = _userManager.Users
+        var users = await _userManager.Users
             .OrderBy(user => user.Email)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         var result = new List<RoleManagementUser>();
 
