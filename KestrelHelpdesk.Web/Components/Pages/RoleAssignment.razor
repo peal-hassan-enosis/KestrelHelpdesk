@@ -11,11 +11,12 @@
 
 <PageTitle>Role Assignment - Kestrel Helpdesk</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
-    <MudText Typo="Typo.h4" GutterBottom="true">Role Assignment</MudText>
-    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-        Manage Employee and Agent access. The Manager account is not listed here.
-    </MudText>
+<MudContainer MaxWidth="MaxWidth.Large" Class="page-shell page-shell-wide role-assignment-page">
+    <div class="page-header">
+        <p class="eyebrow">ADMINISTRATION</p>
+        <MudText Typo="Typo.h4" Class="page-title">Role assignment</MudText>
+        <p class="page-subtitle">Manage application access for Employees and Agents. The Manager account is kept separate.</p>
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
