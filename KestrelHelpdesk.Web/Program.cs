@@ -27,6 +27,7 @@ builder.Services.AddMudServices();
 
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+builder.Services.AddScoped<IExcelTicketImportService, ExcelTicketImportService>();
 builder.Services.AddScoped<ICurrentUserContext, IdentityCurrentUserContext>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
 builder.Services.AddScoped<BrowserTimeZoneService>();
