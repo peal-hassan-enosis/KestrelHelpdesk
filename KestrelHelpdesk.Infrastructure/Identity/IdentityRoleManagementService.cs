@@ -9,21 +9,27 @@ namespace KestrelHelpdesk.Infrastructure.Identity;
 public sealed class IdentityRoleManagementService : IRoleManagementService
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ICurrentUserContext _currentUser;
 
-    public IdentityRoleManagementService(UserManager<ApplicationUser> userManager)
+    public IdentityRoleManagementService(
+        UserManager<ApplicationUser> userManager,
+        ICurrentUserContext currentUser)
     {
         _userManager = userManager;
+        _currentUser = currentUser;
     }
 
     public async Task<IReadOnlyList<RoleManagementUser>> GetAssignedUsersAsync(
         CancellationToken cancellationToken = default)
     {
+        await EnsureManagerAsync();
         return await GetUsersAsync(assignedOnly: true, cancellationToken);
     }
 
     public async Task<IReadOnlyList<RoleManagementUser>> GetUnassignedUsersAsync(
         CancellationToken cancellationToken = default)
     {
+        await EnsureManagerAsync();
         return await GetUsersAsync(assignedOnly: false, cancellationToken);
     }
 
@@ -32,6 +38,8 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
         string role,
         CancellationToken cancellationToken = default)
     {
+        await EnsureManagerAsync();
+
         if (!IsManagedRole(role))
             throw new ArgumentException("Only Employee or Agent roles can be assigned.", nameof(role));
 
@@ -86,6 +94,13 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
         }
 
         return result;
+    }
+
+    private async Task EnsureManagerAsync()
+    {
+        var currentUser = await _currentUser.GetCurrentUserAsync();
+        if (currentUser is null || !currentUser.IsInRole(AppRoles.Manager))
+            throw new UnauthorizedAccessException("Only managers can manage user roles.");
     }
 
     private static bool IsManagedRole(string role) =>
