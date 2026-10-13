@@ -3,7 +3,7 @@
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Authorization
-@inject ITicketService TicketService
+@inject ITicketQueryService TicketQueryService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
@@ -54,7 +54,7 @@
 
   private async Task LoadCountsAsync()
   {
-    statusCounts = await TicketService.GetTicketStatusCountsAsync(activeScope);
+    statusCounts = await TicketQueryService.GetTicketStatusCountsAsync(activeScope);
   }
 
   private async Task SetScope(TicketScope scope)
