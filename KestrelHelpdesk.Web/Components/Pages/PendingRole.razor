@@ -1,0 +1,32 @@
+@page "/pending-role"
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Role Assignment Pending - Kestrel Helpdesk</PageTitle>
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="card shadow-sm border-0" style="max-width: 640px; width: 100%;">
+        <div class="card-body p-5 text-center">
+            <h2 class="mb-3">Role Assignment Pending</h2>
+            <p class="text-muted mb-4">
+                Your account has been registered successfully, but a Manager has not assigned you an application role yet.
+            </p>
+            <p class="mb-4">
+                Until you are assigned as an <strong>Employee</strong> or <strong>Agent</strong>,
+                you cannot access the ticket board, create tickets, dashboard, or Excel import.
+            </p>
+            <p class="text-muted mb-4">
+                Please contact the Manager and ask them to assign your role. After the role is assigned,
+                log in again to access the application.
+            </p>
+
+            <form action="/Account/Logout" method="post" class="d-inline">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="/Account/Login" />
+                <button type="submit" class="btn btn-outline-danger">Log out</button>
+            </form>
+        </div>
+    </div>
+</div>
