@@ -140,14 +140,19 @@ public class TicketRepository : ITicketRepository
     public async Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync(TicketScope scope, string userId)
     {
         using var context = await _factory.CreateDbContextAsync();
-        var query = context.Tickets.AsNoTracking();
-        query = scope switch
-        {
-            TicketScope.EmployeeOwn or TicketScope.AgentCreated => query.Where(t => t.CreatedBy == userId),
-            TicketScope.AgentAssigned => query.Where(t => t.AssignedToUserId == userId),
-            TicketScope.ManagerAll => query,
-            _ => query.Where(t => false)
-        };
+
+        // Reuse the grid's access-filtered base query so the dashboard and ticket board
+        // always calculate visibility using the same rules.
+        var query = BuildTicketQuery(
+            context,
+            statusFilter: null,
+            searchTerm: null,
+            sortByColumn: null,
+            sortByAscending: true,
+            scope: scope,
+            userId: userId,
+            notAssignedOnly: false);
+
         return await query.GroupBy(t => t.Status)
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Status, x => x.Count);
