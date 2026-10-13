@@ -54,22 +54,37 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default)
     {
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
-        if (ticket is null)
-            throw new UnauthorizedAccessException();
+        var existingAttachments = Array.Empty<TicketAttachment>();
 
-        var existingAttachments = ticket.Attachments ?? [];
-        var existingIds = existingAttachments.Select(a => a.Id).ToHashSet();
-        if (attachmentIdsToDelete.Any(id => !existingIds.Contains(id)))
-            throw new ValidationException("One or more attachments do not belong to this ticket.");
+        // A new ticket has no database ID yet. Validate its new files without
+        // attempting to load ticket ID 0; access validation happens when the
+        // ticket is created and ApplyChangesAsync persists the attachments.
+        if (ticketId > 0)
+        {
+            var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
+            if (ticket is null)
+                throw new UnauthorizedAccessException();
 
-        var finalCount = existingAttachments.Count - attachmentIdsToDelete.Count + files.Count;
+            existingAttachments = (ticket.Attachments ?? []).ToArray();
+
+            var existingIds = existingAttachments.Select(a => a.Id).ToHashSet();
+            if (attachmentIdsToDelete.Any(id => !existingIds.Contains(id)))
+                throw new ValidationException("One or more attachments do not belong to this ticket.");
+        }
+        else if (attachmentIdsToDelete.Count > 0)
+        {
+            throw new ValidationException("Attachments cannot be deleted before the ticket is created.");
+        }
+
+        var finalCount = existingAttachments.Length - attachmentIdsToDelete.Count + files.Count;
         if (finalCount > MaxFilesPerTicket)
             throw new ValidationException($"A ticket can have a maximum of {MaxFilesPerTicket} attachments.");
 
         var errors = new List<string>();
         foreach (var file in files)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var extension = Path.GetExtension(file.Name);
             if (!AllowedContentTypes.ContainsKey(extension))
             {
@@ -114,6 +129,8 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
             var newAttachments = new List<TicketAttachment>();
             foreach (var file in files)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var extension = Path.GetExtension(file.Name);
                 var contentType = AllowedContentTypes[extension];
                 var sanitizedName = Path.GetFileName(file.Name);
