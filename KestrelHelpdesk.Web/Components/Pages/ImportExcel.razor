@@ -11,13 +11,14 @@
 
 <PageTitle>Import Excel</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
-    <MudText Typo="Typo.h4" GutterBottom="true">Import Excel</MudText>
-    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-        Import tickets from an .xlsx file. Status and CreatedBy are assigned automatically.
-    </MudText>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="page-shell page-shell-narrow import-page">
+    <div class="page-header">
+        <p class="eyebrow">DATA TOOLS</p>
+        <MudText Typo="Typo.h4" Class="page-title">Import tickets</MudText>
+        <p class="page-subtitle">Bring an .xlsx ticket list into the workspace. Status and creator are assigned automatically.</p>
+    </div>
 
-    <MudPaper Class="pa-4">
+    <MudPaper Class="pa-4 form-surface">
         <InputFile OnChange="SelectFile" accept=".xlsx" />
 
         @if (_selectedFile is not null)
@@ -36,7 +37,7 @@
 
     @if (_validation is not null)
     {
-        <MudPaper Class="pa-4 mt-4">
+        <MudPaper Class="pa-4 mt-4 form-surface">
             @if (_validation.Errors.Count > 0)
             {
                 <MudAlert Severity="Severity.Error" Class="mb-3">
