@@ -32,15 +32,15 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
         {
             using var workbook = new XSSFWorkbook(excelStream);
             if (workbook.NumberOfSheets == 0)
-                return new TicketImportValidationResult { Errors = ["The Excel file does not contain a worksheet."] };
+                return new TicketImportValidationResult { Errors = ["The Excel file is empty."] };
 
             var sheet = workbook.GetSheetAt(0);
-            if (sheet.PhysicalNumberOfRows == 0)
-                return new TicketImportValidationResult { Errors = ["The first worksheet is empty."] };
+            if (sheet.PhysicalNumberOfRows <= 1)
+                return new TicketImportValidationResult { Errors = ["The Excel file is empty."] };
 
             var headerRow = sheet.GetRow(sheet.FirstRowNum);
             if (headerRow is null)
-                return new TicketImportValidationResult { Errors = ["The Excel file does not contain a header row."] };
+                return new TicketImportValidationResult { Errors = ["The Excel file is empty."] };
 
             var headers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (var cellIndex = headerRow.FirstCellNum; cellIndex < headerRow.LastCellNum; cellIndex++)
@@ -122,7 +122,7 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
                 errors.Add($"The Excel file exceeds the maximum of {MaxRows:N0} data rows.");
 
             if (rows.Count == 0 && errors.Count == 0)
-                errors.Add("The Excel file does not contain any ticket rows.");
+                errors.Add("The Excel file is empty.");
 
             if (errors.Count == 0)
             {
