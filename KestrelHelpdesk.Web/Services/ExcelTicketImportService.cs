@@ -30,7 +30,14 @@ public sealed class ExcelTicketImportService : IExcelTicketImportService
 
         try
         {
-            using var workbook = new XSSFWorkbook(excelStream);
+            // IBrowserFile.OpenReadStream returns a stream that supports asynchronous
+            // reads only. NPOI's XSSFWorkbook constructor performs synchronous reads,
+            // so first copy the uploaded stream into a seekable MemoryStream.
+            await using var memoryStream = new MemoryStream();
+            await excelStream.CopyToAsync(memoryStream, cancellationToken);
+            memoryStream.Position = 0;
+
+            using var workbook = new XSSFWorkbook(memoryStream);
             if (workbook.NumberOfSheets == 0)
                 return new TicketImportValidationResult { Errors = ["The Excel file is empty."] };
 
