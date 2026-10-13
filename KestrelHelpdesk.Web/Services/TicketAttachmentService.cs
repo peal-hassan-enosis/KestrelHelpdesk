@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Forms;
 using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
@@ -173,10 +174,29 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
     public async Task<(Stream Content, string ContentType, string FileName)> OpenDownloadAsync(
         int ticketId,
         int attachmentId,
+        ClaimsPrincipal user,
         CancellationToken cancellationToken = default)
     {
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
+        if (user.Identity?.IsAuthenticated != true)
+            throw new UnauthorizedAccessException();
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new UnauthorizedAccessException();
+
+        // This method is used by the HTTP download endpoint, not by a Razor
+        // component. Do not call TicketService.GetTicketByIdAsync here because
+        // that service resolves the Blazor AuthenticationStateProvider, which
+        // is unavailable for an ordinary HTTP request.
+        var ticket = await _repository.GetTicketByIdAsync(ticketId);
         if (ticket is null)
+            throw new KeyNotFoundException($"Ticket {ticketId} was not found.");
+
+        var canView = user.IsInRole(AppRoles.Manager)
+            || ticket.CreatedBy == userId
+            || (user.IsInRole(AppRoles.Agent) && ticket.AssignedToUserId == userId);
+
+        if (!canView)
             throw new UnauthorizedAccessException();
 
         var attachment = (ticket.Attachments ?? []).FirstOrDefault(a => a.Id == attachmentId);
