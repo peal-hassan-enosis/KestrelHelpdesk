@@ -26,7 +26,7 @@ public sealed class TicketService : ITicketService
     {
         var user = await RequireUserAsync();
         var ticket = await _repository.GetTicketByIdAsync(id);
-        return ticket is not null && CanView(user, ticket) ? ticket : null;
+        return ticket is not null && TicketAccessPolicy.CanView(user, ticket) ? ticket : null;
     }
 
     public async Task CreateTicketAsync(Ticket ticket)
@@ -48,7 +48,7 @@ public sealed class TicketService : ITicketService
         var existing = await _repository.GetTicketByIdAsync(ticket.Id)
             ?? throw new KeyNotFoundException($"Ticket {ticket.Id} was not found.");
 
-        if (!CanEdit(user, existing))
+        if (!TicketAccessPolicy.CanEdit(user, existing))
             throw new UnauthorizedAccessException("You are not allowed to edit this ticket.");
 
         var statusChanged = existing.Status != ticket.Status;
@@ -89,11 +89,4 @@ public sealed class TicketService : ITicketService
         if (errors.Count > 0)
             throw new ValidationException(string.Join(" ", errors));
     }
-
-    private static bool CanView(CurrentUserInfo user, Ticket ticket) =>
-        user.IsInRole(AppRoles.Manager)
-        || ticket.CreatedBy == user.UserId
-        || (user.IsInRole(AppRoles.Agent) && ticket.AssignedToUserId == user.UserId);
-
-    private static bool CanEdit(CurrentUserInfo user, Ticket ticket) => CanView(user, ticket);
 }
