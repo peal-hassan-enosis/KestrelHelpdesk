@@ -1,7 +1,45 @@
-﻿@page "/"
+@page "/"
+@using KestrelHelpdesk.Core.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - Kestrel Helpdesk</PageTitle>
 
-<h1>Hello, world!</h1>
+@if (!initialized)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!isAuthenticated)
+{
+    <div class="py-5">
+        <h1>Kestrel Helpdesk</h1>
+        <p class="lead">Manage support tickets, assignments, comments, and attachments.</p>
+        <a class="btn btn-primary me-2" href="/Account/Login">Log in</a>
+        <a class="btn btn-outline-primary" href="/Account/Register">Register</a>
+    </div>
+}
 
-Welcome to your new app.
+@code {
+    private bool initialized;
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        isAuthenticated = user.Identity?.IsAuthenticated == true;
+
+        if (isAuthenticated)
+        {
+            var hasApplicationRole =
+                user.IsInRole(AppRoles.Manager) ||
+                user.IsInRole(AppRoles.Agent) ||
+                user.IsInRole(AppRoles.Employee);
+
+            NavigationManager.NavigateTo(hasApplicationRole ? "/tickets" : "/pending-role", replace: true);
+            return;
+        }
+
+        initialized = true;
+    }
+}
