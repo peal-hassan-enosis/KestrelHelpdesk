@@ -54,7 +54,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default)
     {
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId, cancellationToken);
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
         if (ticket is null)
             throw new UnauthorizedAccessException();
 
@@ -94,7 +94,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         if (validationErrors.Count > 0)
             throw new ValidationException(string.Join(" ", validationErrors));
 
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId, cancellationToken);
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
         if (ticket is null)
             throw new UnauthorizedAccessException();
 
@@ -106,7 +106,8 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         var savedFiles = new List<(string StoredFileName, string StoragePath)>();
         try
         {
-            var userId = await _currentUser.GetUserIdAsync(cancellationToken);
+            var currentUser = await _currentUser.GetCurrentUserAsync();
+            var userId = currentUser?.UserId;
             if (string.IsNullOrWhiteSpace(userId))
                 throw new UnauthorizedAccessException();
 
@@ -157,7 +158,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         int attachmentId,
         CancellationToken cancellationToken = default)
     {
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId, cancellationToken);
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
         if (ticket is null)
             throw new UnauthorizedAccessException();
 
