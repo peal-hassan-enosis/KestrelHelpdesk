@@ -30,4 +30,12 @@ public interface ITicketService
     Task AddCommentAsync(int ticketId, Comment comment);
     Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync(TicketScope scope);
     Task<IReadOnlyList<AssignableUser>> GetAgentsAsync();
+    Task<IReadOnlyList<string>> ValidateImportRowsAsync(
+        IReadOnlyList<TicketImportRow> rows,
+        bool ignoreAssignments,
+        CancellationToken cancellationToken = default);
+    Task<int> ImportTicketsAsync(
+        IReadOnlyList<TicketImportRow> rows,
+        bool ignoreAssignments,
+        CancellationToken cancellationToken = default);
 }
