@@ -4,19 +4,86 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
-<PageTitle>Home - Kestrel Helpdesk</PageTitle>
+<PageTitle>Welcome - Kestrel Helpdesk</PageTitle>
 
 @if (!initialized)
 {
-    <p><em>Loading...</em></p>
+    <div class="home-loading"><span class="loading-orb"></span><span>Opening Kestrel Helpdesk…</span></div>
 }
 else if (!isAuthenticated)
 {
-    <div class="py-5">
-        <h1>Kestrel Helpdesk</h1>
-        <p class="lead">Manage support tickets, assignments, comments, and attachments.</p>
-        <a class="btn btn-primary me-2" href="/Account/Login">Log in</a>
-        <a class="btn btn-outline-primary" href="/Account/Register">Register</a>
+    <div class="landing-page">
+        <section class="landing-hero">
+            <div class="landing-hero-copy">
+                <p class="eyebrow hero-eyebrow">A clearer way to get support</p>
+                <h1>Support requests,<br /><span>without the guesswork.</span></h1>
+                <p>
+                    Kestrel Helpdesk brings requests, ownership, progress updates and supporting files into one organized workspace,
+                    so every issue has a clear place to start and a path to resolution.
+                </p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="/Account/Login">Open support portal <span aria-hidden="true">→</span></a>
+                    <a class="btn btn-outline-light" href="/Account/Register">Create an account</a>
+                </div>
+                <div class="hero-proofline"><span class="hero-proof-dot"></span> Track request status <span>·</span> Keep context together <span>·</span> Know who owns the next step</div>
+            </div>
+
+            <div class="landing-hero-preview" aria-label="Illustration of a support request">
+                <div class="landing-preview-window">
+                    <div class="preview-window-top">
+                        <span>REQUEST OVERVIEW</span>
+                        <span class="preview-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                    </div>
+                    <div class="preview-request">
+                        <span class="preview-ticket-label">SAMPLE TICKET · #1042</span>
+                        <h3>Access request</h3>
+                        <p>Help the support team understand the issue and follow progress in one place.</p>
+                    </div>
+                    <div class="preview-assignment"><span>Current status</span><strong class="preview-status-chip">Open</strong></div>
+                    <div class="preview-assignment"><span>Ownership</span><strong>Assigned support agent</strong></div>
+                    <div class="preview-progress"><span>Open</span><span>In progress</span><span>Resolved</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="landing-section">
+            <div class="landing-section-heading">
+                <p class="eyebrow">BUILT AROUND YOUR WORKFLOW</p>
+                <h2>Everything important, in one place.</h2>
+                <p>Keep requests easy to find and simpler to follow up on, without losing the details that help solve them.</p>
+            </div>
+            <div class="feature-grid">
+                <article class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+                    </span>
+                    <h3>Organized ticket tracking</h3>
+                    <p>Create a request with a clear title, category, priority and description. Revisit it any time from the ticket board.</p>
+                </article>
+                <article class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19M17 8v6m-3-3h6"/></svg>
+                    </span>
+                    <h3>Clear ownership</h3>
+                    <p>Agents and managers can see assignment information and use role-appropriate controls to coordinate work.</p>
+                </article>
+                <article class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M5 4h14v12H8l-3 3z"/><path d="M8 8h8M8 12h5"/></svg>
+                    </span>
+                    <h3>Context that stays together</h3>
+                    <p>Keep comments and supporting attachments with the request, so follow-up is easier for everyone involved.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="landing-bottom-cta">
+            <div>
+                <h2>Ready to manage a request?</h2>
+                <p>Sign in to review tickets, check progress or create a new request.</p>
+            </div>
+            <a class="btn btn-primary" href="/Account/Login">Continue to sign in <span aria-hidden="true">→</span></a>
+        </section>
     </div>
 }
 
