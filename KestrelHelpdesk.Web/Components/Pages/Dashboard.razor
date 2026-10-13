@@ -108,7 +108,6 @@
 @code {
     private IJSObjectReference? module;
     private Dictionary<TicketStatus, int> statusCounts = new();
-    private bool chartInitialized;
     private bool isAgent;
     private bool isManager;
     private TicketScope activeScope = TicketScope.EmployeeOwn;
@@ -136,16 +135,14 @@
     {
         activeScope = scope;
         await LoadCountsAsync();
-        chartInitialized = false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (chartInitialized)
-            return;
-
+        // The dashboard may be visited again within the same interactive circuit.
+        // Reconcile the chart with the DOM on every render instead of relying on a
+        // one-time flag, which can leave a blank canvas after client-side navigation.
         module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/dashboard.js");
-        await module.InvokeVoidAsync("destroyChart");
 
         if (TotalTicketCount > 0)
         {
@@ -155,8 +152,10 @@
                 new[] { "Open", "In Progress", "Resolved" },
                 new[] { GetCount(TicketStatus.Open), GetCount(TicketStatus.InProgress), GetCount(TicketStatus.Resolved) });
         }
-
-        chartInitialized = true;
+        else
+        {
+            await module.InvokeVoidAsync("destroyChart");
+        }
     }
 
     private int GetCount(TicketStatus status) =>
