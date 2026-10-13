@@ -11,16 +11,6 @@ public sealed class TicketAttachmentRepository : ITicketAttachmentRepository
 
     public TicketAttachmentRepository(IDbContextFactory<ApplicationDbContext> factory) => _factory = factory;
 
-    public async Task<IReadOnlyList<TicketAttachment>> GetByTicketIdAsync(int ticketId, CancellationToken cancellationToken = default)
-    {
-        using var context = await _factory.CreateDbContextAsync(cancellationToken);
-        return await context.TicketAttachments
-            .AsNoTracking()
-            .Where(a => a.TicketId == ticketId)
-            .OrderBy(a => a.Id)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task AddRangeAsync(IReadOnlyList<TicketAttachment> attachments, CancellationToken cancellationToken = default)
     {
         if (attachments.Count == 0) return;
