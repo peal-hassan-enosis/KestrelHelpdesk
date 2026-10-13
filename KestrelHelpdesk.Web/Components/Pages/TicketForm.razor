@@ -8,7 +8,8 @@
 
 <EditForm Model="TicketModel" OnValidSubmit="HandleValidSubmit" class="ticket-form">
   <DataAnnotationsValidator />
-  <ValidationSummary class="alert alert-danger" />
+  <ValidationSummary class="alert alert-danger validation-summary-card" />
+  <div class="ticket-form-intro"><span class="eyebrow">REQUEST INFORMATION</span><p class="text-muted small mb-0">Fields marked as required must be completed before the request can be saved.</p></div>
 
   <div class="mb-3">
     <label class="form-label fw-bold">Ticket Title</label>
@@ -67,10 +68,13 @@
     <ValidationMessage For="@(() => TicketModel.Description)" class="text-danger small" />
   </div>
 
-  <div class="mb-4">
-    <label class="form-label fw-bold">Attachments</label>
-    <InputFile OnChange="HandleFilesSelected" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" />
-    <div class="form-text">Maximum 3 files, 10 MB per file.</div>
+  <section class="mb-4 attachment-section">
+    <div class="ticket-section-heading"><span class="eyebrow">FILES &amp; EVIDENCE</span><h2 class="card-title">Attachments</h2></div>
+    <label class="file-upload-panel">
+      <span class="file-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg></span>
+      <span class="file-upload-copy"><strong>Select supporting files</strong><small>PDF, images, Office files, CSV, text or ZIP · Up to 3 files, 10 MB each</small></span>
+      <InputFile OnChange="HandleFilesSelected" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" />
+    </label>
 
     @if (!string.IsNullOrWhiteSpace(attachmentError))
     {
@@ -83,7 +87,7 @@
         <div class="fw-semibold mb-2">Existing attachments</div>
         @foreach (var attachment in TicketModel.Attachments.Where(a => !attachmentsToDelete.Contains(a.Id)))
         {
-          <div class="d-flex align-items-center justify-content-between border rounded px-3 py-2 mb-2">
+          <div class="d-flex align-items-center justify-content-between attachment-row" @key="attachment.Id">
             <span>@attachment.OriginalFileName (@FormatFileSize(attachment.FileSize))</span>
             <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => MarkAttachmentForDeletion(attachment.Id)">Delete</button>
           </div>
@@ -97,7 +101,7 @@
         <div class="fw-semibold mb-2">New attachments</div>
         @foreach (var file in selectedFiles)
         {
-          <div class="border rounded px-3 py-2 mb-2">
+          <div class="attachment-row attachment-row-new" @key="file.Name">
             @file.Name (@FormatFileSize(file.Size))
           </div>
         }
@@ -105,9 +109,9 @@
     }
   </div>
 
-  <div class="d-flex justify-content-between">
+  <div class="form-actions">
     <a href="/tickets" class="btn btn-outline-secondary">Cancel</a>
-    <button type="submit" class="btn btn-primary">@SubmitButtonText</button>
+    <button type="submit" class="btn btn-primary">@SubmitButtonText <span aria-hidden="true">→</span></button>
   </div>
 </EditForm>
 
