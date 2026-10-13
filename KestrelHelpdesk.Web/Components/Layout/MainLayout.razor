@@ -21,8 +21,8 @@
     <div class="app-main">
         <header class="app-topbar">
             <div class="topbar-context"><span class="topbar-kicker">KESTREL HELPDESK</span><span class="topbar-context-title">Support workspace</span></div>
-            <AuthorizeView Context="authState">
-                <Authorized>
+            <AuthorizeView>
+                <Authorized Context="authState">
                     <div class="topbar-user">
                         <span class="user-avatar" aria-hidden="true">@GetInitials(authState.User.Identity?.Name)</span>
                         <div class="user-details">
