@@ -13,85 +13,165 @@
 
 <PageTitle>Dashboard - Kestrel Helpdesk</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h2>Helpdesk Dashboard</h2>
-    <p class="text-muted mb-0">Ticket overview by status</p>
-  </div>
-</div>
+<div class="page-shell page-shell-wide dashboard-page">
+    <header class="page-header page-header-split">
+        <div>
+            <p class="eyebrow">SUPPORT OPERATIONS</p>
+            <h1 class="page-title">@(isManager ? "Support overview" : isAgent ? "My workload" : "My tickets")</h1>
+            <p class="page-subtitle">
+                @(isManager
+                    ? "A quick view of ticket status across the helpdesk."
+                    : isAgent
+                        ? "Review the status of requests assigned to you or created by you."
+                        : "A quick view of the tickets you have created.")
+            </p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-outline-secondary" href="/tickets">View ticket board <span aria-hidden="true">→</span></a>
+        </div>
+    </header>
 
-@if (isAgent)
-{
-  <div class="btn-group mb-3" role="group">
-    <button class="btn @(activeScope == TicketScope.AgentAssigned ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetScope(TicketScope.AgentAssigned)">Assigned</button>
-    <button class="btn @(activeScope == TicketScope.AgentCreated ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetScope(TicketScope.AgentCreated)">Created by Me</button>
-  </div>
-}
+    @if (isAgent)
+    {
+        <div class="dashboard-scope-switch mb-4" role="group" aria-label="Choose ticket scope">
+            <button type="button" class="scope-button @(activeScope == TicketScope.AgentAssigned ? "active" : "")" @onclick="() => SetScope(TicketScope.AgentAssigned)">Assigned to me</button>
+            <button type="button" class="scope-button @(activeScope == TicketScope.AgentCreated ? "active" : "")" @onclick="() => SetScope(TicketScope.AgentCreated)">Created by me</button>
+        </div>
+    }
 
-<div class="card shadow-sm border-0">
-  <div class="card-body">
-    <h5 class="card-title">Tickets by Status</h5>
-    <div style="height: 400px;"><canvas id="ticketStatusChart"></canvas></div>
-  </div>
+    <section class="metric-grid" aria-label="Ticket status summary">
+        <article class="metric-card metric-total">
+            <div class="metric-top">
+                <span class="metric-label">Total tickets</span>
+                <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg></span>
+            </div>
+            <strong class="metric-value">@TotalTicketCount</strong>
+            <span class="metric-note">In the current view</span>
+        </article>
+        <article class="metric-card metric-open">
+            <div class="metric-top">
+                <span class="metric-label">Open</span>
+                <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span>
+            </div>
+            <strong class="metric-value">@GetCount(TicketStatus.Open)</strong>
+            <span class="metric-note">Waiting to be picked up</span>
+        </article>
+        <article class="metric-card metric-progress">
+            <div class="metric-top">
+                <span class="metric-label">In progress</span>
+                <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
+            </div>
+            <strong class="metric-value">@GetCount(TicketStatus.InProgress)</strong>
+            <span class="metric-note">Currently being worked on</span>
+        </article>
+        <article class="metric-card metric-resolved">
+            <div class="metric-top">
+                <span class="metric-label">Resolved</span>
+                <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
+            </div>
+            <strong class="metric-value">@GetCount(TicketStatus.Resolved)</strong>
+            <span class="metric-note">Marked as resolved</span>
+        </article>
+    </section>
+
+    <section class="surface-card chart-card">
+        <div class="chart-card-header">
+            <div>
+                <h2 class="chart-card-title">Tickets by status</h2>
+                <p class="chart-card-subtitle">Status distribution for the selected ticket view.</p>
+            </div>
+            <div class="chart-legend" aria-label="Chart legend">
+                <span class="legend-pill"><span class="legend-swatch swatch-open"></span>Open</span>
+                <span class="legend-pill"><span class="legend-swatch swatch-progress"></span>In progress</span>
+                <span class="legend-pill"><span class="legend-swatch swatch-resolved"></span>Resolved</span>
+            </div>
+        </div>
+
+        @if (TotalTicketCount > 0)
+        {
+            <div class="chart-canvas-wrap">
+                <canvas id="ticketStatusChart" aria-label="Bar chart showing ticket counts by status" role="img"></canvas>
+            </div>
+        }
+        else
+        {
+            <div class="chart-empty-state">
+                <span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 5-7"/></svg></span>
+                <h3>No tickets in this view yet</h3>
+                <p>When tickets are available in this scope, status totals and the chart will appear here.</p>
+                <a class="btn btn-primary mt-3" href="/tickets/new">Create a ticket</a>
+            </div>
+        }
+    </section>
 </div>
 
 @code {
-  private IJSObjectReference? module;
-  private Dictionary<TicketStatus, int> statusCounts = new();
-  private bool chartInitialized;
-  private bool isAgent;
-  private TicketScope activeScope = TicketScope.EmployeeOwn;
+    private IJSObjectReference? module;
+    private Dictionary<TicketStatus, int> statusCounts = new();
+    private bool chartInitialized;
+    private bool isAgent;
+    private bool isManager;
+    private TicketScope activeScope = TicketScope.EmployeeOwn;
 
-  protected override async Task OnInitializedAsync()
-  {
-    var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
-    isAgent = user.IsInRole(AppRoles.Agent);
-    activeScope = user.IsInRole(AppRoles.Manager)
-      ? TicketScope.ManagerAll
-      : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
-    await LoadCountsAsync();
-  }
+    private int TotalTicketCount => statusCounts.Values.Sum();
 
-  private async Task LoadCountsAsync()
-  {
-    statusCounts = await TicketQueryService.GetTicketStatusCountsAsync(activeScope);
-  }
-
-  private async Task SetScope(TicketScope scope)
-  {
-    activeScope = scope;
-    await LoadCountsAsync();
-    chartInitialized = false;
-    StateHasChanged();
-  }
-
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    if (chartInitialized) return;
-    module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/dashboard.js");
-    if (!firstRender) await module.InvokeVoidAsync("destroyChart");
-
-    await module.InvokeVoidAsync(
-      "createStatusChart",
-      "ticketStatusChart",
-      new[] { "Open", "In Progress", "Resolved" },
-      new[] { GetCount(TicketStatus.Open), GetCount(TicketStatus.InProgress), GetCount(TicketStatus.Resolved) });
-
-    chartInitialized = true;
-  }
-
-  private int GetCount(TicketStatus status) => statusCounts.TryGetValue(status, out var count) ? count : 0;
-
-  public async ValueTask DisposeAsync()
-  {
-    if (module is not null)
+    protected override async Task OnInitializedAsync()
     {
-      try
-      {
-        await module.InvokeVoidAsync("destroyChart");
-        await module.DisposeAsync();
-      }
-      catch (JSDisconnectedException) { }
+        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        isAgent = user.IsInRole(AppRoles.Agent);
+        isManager = user.IsInRole(AppRoles.Manager);
+        activeScope = isManager
+            ? TicketScope.ManagerAll
+            : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
+
+        await LoadCountsAsync();
     }
-  }
+
+    private async Task LoadCountsAsync()
+    {
+        statusCounts = await TicketQueryService.GetTicketStatusCountsAsync(activeScope);
+    }
+
+    private async Task SetScope(TicketScope scope)
+    {
+        activeScope = scope;
+        await LoadCountsAsync();
+        chartInitialized = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (chartInitialized)
+            return;
+
+        module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/dashboard.js");
+        await module.InvokeVoidAsync("destroyChart");
+
+        if (TotalTicketCount > 0)
+        {
+            await module.InvokeVoidAsync(
+                "createStatusChart",
+                "ticketStatusChart",
+                new[] { "Open", "In Progress", "Resolved" },
+                new[] { GetCount(TicketStatus.Open), GetCount(TicketStatus.InProgress), GetCount(TicketStatus.Resolved) });
+        }
+
+        chartInitialized = true;
+    }
+
+    private int GetCount(TicketStatus status) =>
+        statusCounts.TryGetValue(status, out var count) ? count : 0;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try
+            {
+                await module.InvokeVoidAsync("destroyChart");
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException) { }
+        }
+    }
 }
