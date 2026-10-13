@@ -1,6 +1,6 @@
-﻿@using KestrelHelpdesk.Core.Models
+@using KestrelHelpdesk.Core.Models
 
-<span class="badge @GetBadgeClass()">@Priority.ToString()</span>
+<span class="ticket-priority-badge @GetBadgeClass()" aria-label="Priority: @Priority.ToString()">@Priority.ToString()</span>
 
 @code {
   [Parameter, EditorRequired]
@@ -8,10 +8,10 @@
 
   private string GetBadgeClass() => Priority switch
   {
-    TicketPriority.Low => "bg-info text-dark",
-    TicketPriority.Medium => "bg-secondary",
-    TicketPriority.High => "bg-warning text-dark",
-    TicketPriority.Critical => "bg-danger",
-    _ => "bg-light"
+    TicketPriority.Low => "priority-low",
+    TicketPriority.Medium => "priority-medium",
+    TicketPriority.High => "priority-high",
+    TicketPriority.Critical => "priority-critical",
+    _ => "priority-default"
   };
 }
