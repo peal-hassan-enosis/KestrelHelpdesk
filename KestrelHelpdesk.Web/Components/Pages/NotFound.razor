@@ -1,10 +1,17 @@
 ﻿@page "/not-found"
 @layout MainLayout
 
-<PageTitle>Not Found</PageTitle>
-<div class="container text-center mt-5">
-  <h1 class="display-1 text-danger fw-bold">404</h1>
-  <h2 class="mb-4">Page Not Found</h2>
-  <p class="lead mb-4">The route you requested does not exist or you followed a broken link.</p>
-  <a href="/" class="btn btn-primary btn-lg">Return to Dashboard</a>
+<PageTitle>Page not found - Kestrel Helpdesk</PageTitle>
+
+<div class="page-shell state-page">
+    <section class="card onboarding-card">
+        <span class="empty-state-icon mx-auto" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4M8.5 8.5l4 4m0-4-4 4"/></svg></span>
+        <p class="eyebrow">PAGE NOT FOUND</p>
+        <h1>We couldn't find that page.</h1>
+        <p class="text-muted mb-4">The link may be out of date, or the page may have moved. Return to the helpdesk and continue from there.</p>
+        <div class="page-actions justify-content-center">
+            <a href="/dashboard" class="btn btn-primary">Go to dashboard</a>
+            <a href="/tickets" class="btn btn-outline-secondary">Open ticket board</a>
+        </div>
+    </section>
 </div>
