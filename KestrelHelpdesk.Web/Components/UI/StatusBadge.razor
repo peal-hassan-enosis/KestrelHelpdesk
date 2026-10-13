@@ -1,6 +1,6 @@
-﻿@using KestrelHelpdesk.Core.Models
+@using KestrelHelpdesk.Core.Models
 
-<span class="badge @GetBadgeClass()">@Status.ToString()</span>
+<span class="ticket-status-badge @GetBadgeClass()" aria-label="Status: @GetStatusLabel()">@GetStatusLabel()</span>
 
 @code {
   [Parameter, EditorRequired]
@@ -8,9 +8,15 @@
 
   private string GetBadgeClass() => Status switch
   {
-    TicketStatus.Open => "bg-primary",
-    TicketStatus.InProgress => "bg-warning text-dark",
-    TicketStatus.Resolved => "bg-success",
-    _ => "bg-secondary"
+    TicketStatus.Open => "status-open",
+    TicketStatus.InProgress => "status-progress",
+    TicketStatus.Resolved => "status-resolved",
+    _ => "status-default"
+  };
+
+  private string GetStatusLabel() => Status switch
+  {
+    TicketStatus.InProgress => "In progress",
+    _ => Status.ToString()
   };
 }
