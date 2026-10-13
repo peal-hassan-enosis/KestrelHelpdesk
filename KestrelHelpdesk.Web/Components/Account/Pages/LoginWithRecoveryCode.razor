@@ -1,6 +1,7 @@
 @page "/Account/LoginWithRecoveryCode"
 
 @using System.ComponentModel.DataAnnotations
+@using KestrelHelpdesk.Core.Authorization
 @using Microsoft.AspNetCore.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -46,7 +47,6 @@
     {
         Input ??= new();
 
-        // Ensure the user has gone through the username & password screen first
         user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
             throw new InvalidOperationException("Unable to load two-factor authentication user.");
     }
@@ -62,7 +62,9 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", userId);
-            RedirectManager.RedirectTo(ReturnUrl);
+            var roles = await UserManager.GetRolesAsync(user);
+            var hasApplicationRole = roles.Contains(AppRoles.Manager) || roles.Contains(AppRoles.Agent) || roles.Contains(AppRoles.Employee);
+            RedirectManager.RedirectTo(hasApplicationRole ? ReturnUrl : "pending-role");
         }
         else if (result.IsLockedOut)
         {
