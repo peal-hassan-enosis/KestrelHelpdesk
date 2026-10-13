@@ -1,6 +1,7 @@
 using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Infrastructure.Data;
+using KestrelHelpdesk.Infrastructure.FileStorage;
 using KestrelHelpdesk.Infrastructure.Identity;
 using KestrelHelpdesk.Infrastructure.Repositories;
 using KestrelHelpdesk.Core.Services;
