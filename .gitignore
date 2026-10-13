@@ -108,3 +108,6 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Aider local history and cache
+.aider*

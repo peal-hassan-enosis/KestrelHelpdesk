@@ -1,14 +1,18 @@
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace KestrelHelpdesk.Infrastructure.Migrations
 {
-    [Migration("20261013000000_Attachments")]
+    /// <inheritdoc />
     public partial class Attachments : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            
+
             migrationBuilder.CreateTable(
                 name: "TicketAttachments",
                 columns: table => new
@@ -41,10 +45,13 @@ namespace KestrelHelpdesk.Infrastructure.Migrations
                 column: "TicketId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
                 name: "TicketAttachments");
+
+            
         }
     }
 }

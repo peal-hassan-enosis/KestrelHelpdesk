@@ -59,6 +59,9 @@ namespace KestrelHelpdesk.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AssignedToUserId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Category")
                         .HasColumnType("int");
 
@@ -87,6 +90,55 @@ namespace KestrelHelpdesk.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Tickets");
+                });
+
+            modelBuilder.Entity("KestrelHelpdesk.Core.Models.TicketAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("TicketAttachments");
                 });
 
             modelBuilder.Entity("KestrelHelpdesk.Infrastructure.Identity.ApplicationUser", b =>
@@ -318,6 +370,17 @@ namespace KestrelHelpdesk.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("KestrelHelpdesk.Core.Models.TicketAttachment", b =>
+                {
+                    b.HasOne("KestrelHelpdesk.Core.Models.Ticket", "Ticket")
+                        .WithMany("Attachments")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -422,6 +485,8 @@ namespace KestrelHelpdesk.Infrastructure.Migrations
 
             modelBuilder.Entity("KestrelHelpdesk.Core.Models.Ticket", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Comments");
                 });
 #pragma warning restore 612, 618
