@@ -5,6 +5,10 @@ namespace KestrelHelpdesk.Web.Services;
 
 public interface ITicketAttachmentService
 {
+    long MaxFileSize { get; }
+
+    int MaxFilesPerTicket { get; }
+
     Task<IReadOnlyList<string>> ValidateFilesAsync(
         int ticketId,
         IReadOnlyList<IBrowserFile> files,
