@@ -8,8 +8,8 @@ namespace KestrelHelpdesk.Web.Services;
 
 public sealed class TicketAttachmentService : ITicketAttachmentService
 {
-    public const long MaxFileSize = 10 * 1024 * 1024;
-    public const int MaxFilesPerTicket = 3;
+    public long MaxFileSize => 10 * 1024 * 1024;
+    public int MaxFilesPerTicket => 3;
 
     private static readonly IReadOnlyDictionary<string, string> AllowedContentTypes =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -54,19 +54,14 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default)
     {
-        Ticket? ticket = null;
-        if (ticketId > 0)
-        {
-            ticket = await _ticketService.GetTicketByIdAsync(ticketId);
-            if (ticket is null)
-                throw new ValidationException("The ticket does not exist or you do not have access to it.");
-        }
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId, cancellationToken);
+        if (ticket is null)
+            throw new UnauthorizedAccessException();
 
-        var existingAttachments = ticket?.Attachments ?? [];
+        var existingAttachments = ticket.Attachments ?? [];
         var existingIds = existingAttachments.Select(a => a.Id).ToHashSet();
-        var invalidDeleteIds = attachmentIdsToDelete.Where(id => !existingIds.Contains(id)).ToList();
-        if (invalidDeleteIds.Count > 0)
-            throw new ValidationException("One or more attachments selected for deletion are invalid.");
+        if (attachmentIdsToDelete.Any(id => !existingIds.Contains(id)))
+            throw new ValidationException("One or more attachments do not belong to this ticket.");
 
         var finalCount = existingAttachments.Count - attachmentIdsToDelete.Count + files.Count;
         if (finalCount > MaxFilesPerTicket)
@@ -75,15 +70,15 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         var errors = new List<string>();
         foreach (var file in files)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var originalName = Path.GetFileName(file.Name);
-            var extension = Path.GetExtension(originalName);
-
+            var extension = Path.GetExtension(file.Name);
             if (!AllowedContentTypes.ContainsKey(extension))
-                errors.Add($"{originalName}: file type '{extension}' is not allowed.");
+            {
+                errors.Add($"{file.Name}: this file type is not allowed.");
+                continue;
+            }
 
             if (file.Size > MaxFileSize)
-                errors.Add($"{originalName}: file size cannot exceed 10 MB.");
+                errors.Add($"{file.Name}: file size must not exceed {MaxFileSize / (1024 * 1024)} MB.");
         }
 
         return errors;
@@ -99,57 +94,59 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         if (validationErrors.Count > 0)
             throw new ValidationException(string.Join(" ", validationErrors));
 
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId)
-            ?? throw new ValidationException("The ticket does not exist or you do not have access to it.");
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId, cancellationToken);
+        if (ticket is null)
+            throw new UnauthorizedAccessException();
 
-        var currentUser = await _currentUser.GetCurrentUserAsync()
-            ?? throw new ValidationException("You must be signed in to manage attachments.");
-
-        var attachmentsToDelete = ticket.Attachments
+        var existingAttachments = ticket.Attachments ?? [];
+        var attachmentsToDelete = existingAttachments
             .Where(a => attachmentIdsToDelete.Contains(a.Id))
             .ToList();
 
-        var savedPaths = new List<string>();
-        var newAttachments = new List<TicketAttachment>();
-
+        var savedFiles = new List<(string StoredFileName, string StoragePath)>();
         try
         {
+            var userId = await _currentUser.GetUserIdAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new UnauthorizedAccessException();
+
+            var newAttachments = new List<TicketAttachment>();
             foreach (var file in files)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var originalName = Path.GetFileName(file.Name);
-                var extension = Path.GetExtension(originalName);
+                var extension = Path.GetExtension(file.Name);
+                var contentType = AllowedContentTypes[extension];
+                var sanitizedName = Path.GetFileName(file.Name);
 
-                await using var source = file.OpenReadStream(MaxFileSize, cancellationToken);
-                var storedFileName = await _storage.SaveAsync(source, extension, cancellationToken);
-                savedPaths.Add(storedFileName);
+                await using var stream = file.OpenReadStream(MaxFileSize, cancellationToken);
+                var storedFile = await _storage.SaveAsync(stream, extension, cancellationToken);
+                savedFiles.Add(storedFile);
 
                 newAttachments.Add(new TicketAttachment
                 {
                     TicketId = ticketId,
-                    OriginalFileName = originalName.Length > 255 ? originalName[..255] : originalName,
-                    StoredFileName = storedFileName,
-                    ContentType = AllowedContentTypes[extension],
+                    OriginalFileName = sanitizedName,
+                    StoredFileName = storedFile.StoredFileName,
+                    ContentType = contentType,
                     FileSize = file.Size,
-                    StoragePath = storedFileName,
-                    UploadedByUserId = currentUser.UserId,
+                    StoragePath = storedFile.StoragePath,
+                    UploadedByUserId = userId,
                     UploadedAt = DateTime.UtcNow
                 });
             }
 
-            await _repository.AddRangeAsync(newAttachments, cancellationToken);
-            await _repository.DeleteRangeAsync(attachmentsToDelete, cancellationToken);
+            if (newAttachments.Count > 0)
+                await _repository.AddRangeAsync(newAttachments, cancellationToken);
+
+            if (attachmentsToDelete.Count > 0)
+                await _repository.DeleteRangeAsync(attachmentsToDelete, cancellationToken);
 
             foreach (var attachment in attachmentsToDelete)
                 await _storage.DeleteAsync(attachment.StoragePath, cancellationToken);
         }
         catch
         {
-            foreach (var path in savedPaths)
-            {
-                try { await _storage.DeleteAsync(path, CancellationToken.None); }
-                catch { }
-            }
+            foreach (var savedFile in savedFiles)
+                await _storage.DeleteAsync(savedFile.StoragePath, CancellationToken.None);
 
             throw;
         }
@@ -160,13 +157,13 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         int attachmentId,
         CancellationToken cancellationToken = default)
     {
-        var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
+        var ticket = await _ticketService.GetTicketByIdAsync(ticketId, cancellationToken);
         if (ticket is null)
             throw new UnauthorizedAccessException();
 
-        var attachment = ticket.Attachments.FirstOrDefault(a => a.Id == attachmentId);
+        var attachment = (ticket.Attachments ?? []).FirstOrDefault(a => a.Id == attachmentId);
         if (attachment is null)
-            throw new KeyNotFoundException();
+            throw new FileNotFoundException();
 
         var stream = await _storage.OpenReadAsync(attachment.StoragePath, cancellationToken);
         return (stream, attachment.ContentType, attachment.OriginalFileName);
