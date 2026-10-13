@@ -14,17 +14,17 @@
 }
 else
 {
-  <div class="page">
-    <div class="sidebar">
-      <NavMenu />
-    </div>
+  <AuthorizeView>
+    <Authorized Context="auth">
+      <div class="page">
+        <div class="sidebar">
+          <NavMenu />
+        </div>
 
-    <main>
-      <div class="top-row px-4 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Kestrel Helpdesk</span>
+        <main>
+          <div class="top-row px-4 d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Kestrel Helpdesk</span>
 
-        <AuthorizeView>
-          <Authorized Context="auth">
             <div class="d-flex align-items-center gap-3">
               <span class="small text-muted">
                 @auth.User.Identity?.Name
@@ -39,18 +39,28 @@ else
                 <button type="submit" class="btn btn-sm btn-outline-danger">Log out</button>
               </form>
             </div>
-          </Authorized>
-          <NotAuthorized>
-            <a href="/Account/Login" class="btn btn-sm btn-primary">Log in</a>
-          </NotAuthorized>
-        </AuthorizeView>
-      </div>
+          </div>
 
-      <article class="content px-4">
-        @Body
-      </article>
-    </main>
-  </div>
+          <article class="content px-4">
+            @Body
+          </article>
+        </main>
+      </div>
+    </Authorized>
+
+    <NotAuthorized>
+      <main>
+        <div class="top-row px-4 d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Kestrel Helpdesk</span>
+          <a href="/Account/Login" class="btn btn-sm btn-primary">Log in</a>
+        </div>
+
+        <article class="content px-4">
+          @Body
+        </article>
+      </main>
+    </NotAuthorized>
+  </AuthorizeView>
 }
 
 @code {
