@@ -12,15 +12,15 @@
   <div class="ticket-form-intro"><span class="eyebrow">REQUEST INFORMATION</span><p class="text-muted small mb-0">Fields marked as required must be completed before the request can be saved.</p></div>
 
   <div class="mb-3">
-    <label class="form-label fw-bold">Ticket Title</label>
+    <label for="ticket-title" class="form-label fw-bold">Ticket title</label>
     <InputText id="ticket-title" @bind-Value="TicketModel.Title" class="form-control" placeholder="Brief summary of the issue" />
     <ValidationMessage For="@(() => TicketModel.Title)" class="text-danger small" />
   </div>
 
   <div class="row mb-3">
     <div class="col-md-6">
-      <label class="form-label fw-bold">Category</label>
-      <InputSelect @bind-Value="TicketModel.Category" class="form-select">
+      <label for="ticket-category" class="form-label fw-bold">Category</label>
+      <InputSelect id="ticket-category" @bind-Value="TicketModel.Category" class="form-select">
         <option value="">-- Select Category --</option>
         @foreach (var cat in Enum.GetValues<TicketCategory>())
         {
@@ -30,8 +30,8 @@
       <ValidationMessage For="@(() => TicketModel.Category)" class="text-danger small" />
     </div>
     <div class="col-md-6">
-      <label class="form-label fw-bold">Priority</label>
-      <InputSelect @bind-Value="TicketModel.Priority" class="form-select">
+      <label for="ticket-priority" class="form-label fw-bold">Priority</label>
+      <InputSelect id="ticket-priority" @bind-Value="TicketModel.Priority" class="form-select">
         <option value="">-- Select Priority --</option>
         @foreach (var prio in Enum.GetValues<TicketPriority>())
         {
@@ -45,10 +45,10 @@
   @if (!IsCreateMode)
   {
     <div class="mb-3">
-      <label class="form-label fw-bold">Status</label>
+      <label for="ticket-status" class="form-label fw-bold">Status</label>
       @if (CanEditStatus)
       {
-        <InputSelect @bind-Value="TicketModel.Status" class="form-select">
+        <InputSelect id="ticket-status" @bind-Value="TicketModel.Status" class="form-select">
           @foreach (var status in Enum.GetValues<TicketStatus>())
           {
             <option value="@status">@status</option>
@@ -57,14 +57,14 @@
       }
       else
       {
-        <input class="form-control" value="@TicketModel.Status" disabled />
+        <input id="ticket-status" class="form-control" value="@TicketModel.Status" disabled />
       }
     </div>
   }
 
   <div class="mb-3">
-    <label class="form-label fw-bold">Description</label>
-    <InputTextArea @bind-Value="TicketModel.Description" class="form-control" rows="5" placeholder="Detailed explanation of the issue" />
+    <label for="ticket-description" class="form-label fw-bold">Description</label>
+    <InputTextArea id="ticket-description" @bind-Value="TicketModel.Description" class="form-control" rows="5" placeholder="Detailed explanation of the issue" />
     <ValidationMessage For="@(() => TicketModel.Description)" class="text-danger small" />
   </div>
 
@@ -101,7 +101,7 @@
         <div class="fw-semibold mb-2">New attachments</div>
         @foreach (var file in selectedFiles)
         {
-          <div class="attachment-row attachment-row-new" @key="file.Name">
+          <div class="attachment-row attachment-row-new" @key="file">
             @file.Name (@FormatFileSize(file.Size))
           </div>
         }
