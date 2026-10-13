@@ -1,34 +1,15 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Components.Forms;
+using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace KestrelHelpdesk.Web.Services;
 
 public sealed class TicketAttachmentService : ITicketAttachmentService
 {
-    public long MaxFileSize => 10 * 1024 * 1024;
-    public int MaxFilesPerTicket => 3;
-
-    private static readonly IReadOnlyDictionary<string, string> AllowedContentTypes =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [".pdf"] = "application/pdf",
-            [".png"] = "image/png",
-            [".jpg"] = "image/jpeg",
-            [".jpeg"] = "image/jpeg",
-            [".gif"] = "image/gif",
-            [".webp"] = "image/webp",
-            [".txt"] = "text/plain",
-            [".csv"] = "text/csv",
-            [".doc"] = "application/msword",
-            [".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            [".xls"] = "application/vnd.ms-excel",
-            [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            [".ppt"] = "application/vnd.ms-powerpoint",
-            [".pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            [".zip"] = "application/zip"
-        };
+    public long MaxFileSize => TicketAttachmentPolicy.MaxFileSize;
+    public int MaxFilesPerTicket => TicketAttachmentPolicy.MaxFilesPerTicket;
 
     private readonly ITicketService _ticketService;
     private readonly ITicketAttachmentRepository _repository;
@@ -82,7 +63,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
             cancellationToken.ThrowIfCancellationRequested();
 
             var extension = Path.GetExtension(file.Name);
-            if (!AllowedContentTypes.ContainsKey(extension))
+            if (!TicketAttachmentPolicy.TryGetContentType(extension, out _))
             {
                 errors.Add($"{file.Name}: this file type is not allowed.");
                 continue;
@@ -128,9 +109,10 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var extension = Path.GetExtension(file.Name);
-                var contentType = AllowedContentTypes[extension];
-                var sanitizedName = Path.GetFileName(file.Name);
+                if (!TicketAttachmentPolicy.TryGetContentType(extension, out var contentType))
+                    throw new ValidationException($"{file.Name}: this file type is not allowed.");
 
+                var sanitizedName = Path.GetFileName(file.Name);
                 await using var stream = file.OpenReadStream(MaxFileSize, cancellationToken);
                 var storedFile = await _storage.SaveAsync(stream, extension, cancellationToken);
                 savedFiles.Add(storedFile);
