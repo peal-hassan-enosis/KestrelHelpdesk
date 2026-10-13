@@ -1,4 +1,4 @@
-﻿using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Models;
 
 namespace KestrelHelpdesk.Core.Interfaces;
@@ -11,6 +11,7 @@ public interface ITicketRepository
 
     Task<Ticket?> GetTicketByIdAsync(int id);
     Task CreateTicketAsync(Ticket ticket);
+    Task CreateTicketsAsync(IReadOnlyList<Ticket> tickets, CancellationToken cancellationToken = default);
     Task UpdateTicketAsync(Ticket ticket);
     Task AssignTicketAsync(int ticketId, string? agentUserId);
     Task AddCommentAsync(Comment comment);
