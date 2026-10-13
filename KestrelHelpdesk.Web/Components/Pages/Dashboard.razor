@@ -1,4 +1,4 @@
-﻿@page "/dashboard"
+@page "/dashboard"
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
@@ -7,7 +7,7 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
