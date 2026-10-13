@@ -1,3 +1,4 @@
+using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Models;
 using KestrelHelpdesk.Infrastructure.Data;
 using Microsoft.AspNetCore.Components.Forms;
@@ -15,15 +16,18 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly IFileStorageService _fileStorage;
     private readonly Core.Interfaces.ITicketService _ticketService;
+    private readonly ICurrentUserContext _currentUser;
 
     public TicketAttachmentService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         IFileStorageService fileStorage,
-        Core.Interfaces.ITicketService ticketService)
+        Core.Interfaces.ITicketService ticketService,
+        ICurrentUserContext currentUser)
     {
         _dbFactory = dbFactory;
         _fileStorage = fileStorage;
         _ticketService = ticketService;
+        _currentUser = currentUser;
     }
 
     public IReadOnlyList<string> ValidateFiles(IReadOnlyList<IBrowserFile> files, int existingAttachmentCount = 0)
@@ -34,9 +38,8 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         if (totalCount > ITicketAttachmentService.MaxAttachmentsPerTicket)
             errors.Add($"A ticket can have a maximum of {ITicketAttachmentService.MaxAttachmentsPerTicket} attachments.");
 
-        for (var index = 0; index < files.Count; index++)
+        foreach (var file in files)
         {
-            var file = files[index];
             var extension = Path.GetExtension(file.Name);
 
             if (!AllowedExtensions.Contains(extension))
@@ -57,6 +60,8 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
     {
         var ticket = await _ticketService.GetTicketByIdAsync(ticketId)
             ?? throw new UnauthorizedAccessException("You are not allowed to modify this ticket.");
+        var user = await _currentUser.GetCurrentUserAsync()
+            ?? throw new UnauthorizedAccessException("You must be signed in.");
 
         var validationErrors = ValidateFiles(files, existingAttachmentCount);
         if (validationErrors.Count > 0)
@@ -87,7 +92,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                     ContentType = file.ContentType,
                     FileSize = file.Size,
                     StoragePath = storagePath,
-                    UploadedByUserId = ticket.CreatedBy,
+                    UploadedByUserId = user.UserId,
                     UploadedAt = DateTime.UtcNow
                 });
             }
