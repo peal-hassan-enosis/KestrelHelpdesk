@@ -33,17 +33,20 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         };
 
     private readonly ITicketService _ticketService;
+    private readonly ITicketRepository _ticketRepository;
     private readonly ITicketAttachmentRepository _repository;
     private readonly IFileStorageService _storage;
     private readonly ICurrentUserContext _currentUser;
 
     public TicketAttachmentService(
         ITicketService ticketService,
+        ITicketRepository ticketRepository,
         ITicketAttachmentRepository repository,
         IFileStorageService storage,
         ICurrentUserContext currentUser)
     {
         _ticketService = ticketService;
+        _ticketRepository = ticketRepository;
         _repository = repository;
         _storage = storage;
         _currentUser = currentUser;
@@ -188,7 +191,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         // component. Do not call TicketService.GetTicketByIdAsync here because
         // that service resolves the Blazor AuthenticationStateProvider, which
         // is unavailable for an ordinary HTTP request.
-        var ticket = await _repository.GetTicketByIdAsync(ticketId);
+        var ticket = await _ticketRepository.GetTicketByIdAsync(ticketId);
         if (ticket is null)
             throw new KeyNotFoundException($"Ticket {ticketId} was not found.");
 
