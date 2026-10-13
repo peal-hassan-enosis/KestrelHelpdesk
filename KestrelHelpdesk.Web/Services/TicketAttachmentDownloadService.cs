@@ -34,11 +34,12 @@ public sealed class TicketAttachmentDownloadService : ITicketAttachmentDownloadS
         if (ticket is null)
             throw new KeyNotFoundException($"Ticket {ticketId} was not found.");
 
-        var canView = user.IsInRole(AppRoles.Manager)
-            || ticket.CreatedBy == userId
-            || (user.IsInRole(AppRoles.Agent) && ticket.AssignedToUserId == userId);
+        var currentUser = new CurrentUserInfo(
+            userId,
+            user.Identity.Name,
+            user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToArray());
 
-        if (!canView)
+        if (!TicketAccessPolicy.CanView(currentUser, ticket))
             throw new UnauthorizedAccessException();
 
         var attachment = (ticket.Attachments ?? []).FirstOrDefault(a => a.Id == attachmentId);
