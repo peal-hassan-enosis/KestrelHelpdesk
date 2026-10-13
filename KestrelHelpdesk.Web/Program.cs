@@ -35,6 +35,7 @@ builder.Services.AddScoped<ITicketAttachmentRepository, TicketAttachmentReposito
 builder.Services.AddScoped<IExcelTicketImportService, ExcelTicketImportService>();
 builder.Services.AddScoped<ITicketPdfService, TicketPdfService>();
 builder.Services.AddScoped<ITicketAttachmentService, TicketAttachmentService>();
+builder.Services.AddScoped<ITicketAttachmentDownloadService, TicketAttachmentDownloadService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<ICurrentUserContext, IdentityCurrentUserContext>();
 builder.Services.AddScoped<IUserDirectory, IdentityUserDirectory>();
@@ -96,12 +97,12 @@ app.MapGet("/tickets/{ticketId:int}/attachments/{attachmentId:int}", async (
     int ticketId,
     int attachmentId,
     HttpContext httpContext,
-    ITicketAttachmentService attachmentService,
+    ITicketAttachmentDownloadService attachmentDownloadService,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var download = await attachmentService.OpenDownloadAsync(
+        var download = await attachmentDownloadService.OpenDownloadAsync(
             ticketId,
             attachmentId,
             httpContext.User,
