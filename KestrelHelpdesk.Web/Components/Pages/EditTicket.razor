@@ -12,13 +12,15 @@
 @attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
 @rendermode InteractiveServer
 
-<PageTitle>Edit Ticket #@Id</PageTitle>
+<PageTitle>Edit Ticket #@Id - Kestrel Helpdesk</PageTitle>
+
+<div class="page-shell page-shell-narrow ticket-edit-page">
 
 @if (ticketToEdit == null)
 {
   @if (notFound)
   {
-    <div class="alert alert-danger">
+    <div class="alert alert-danger p-4">
       <h4>Ticket Not Found</h4>
       <p>The requested ticket (#@Id) does not exist or you don't have access to it.</p>
       <a href="/tickets" class="btn btn-outline-secondary">Back to Ticket Board</a>
@@ -31,16 +33,24 @@
 }
 else
 {
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Edit Ticket #@ticketToEdit.Id</h3>
-    <a href="/tickets/@ticketToEdit.Id" class="btn btn-outline-secondary btn-sm">Cancel</a>
-  </div>
+  <header class="page-header page-header-split">
+    <div>
+      <p class="eyebrow">REQUEST DETAILS</p>
+      <h1 class="page-title">Edit ticket #@ticketToEdit.Id</h1>
+      <p class="page-subtitle">Update the request details and keep its status current.</p>
+    </div>
+    <div class="page-actions"><a href="/tickets/@ticketToEdit.Id" class="btn btn-outline-secondary">Cancel</a></div>
+  </header>
 
-  <TicketForm TicketModel="ticketToEdit"
-              CanEditStatus="canEditStatus"
-              SubmitButtonText="Update Ticket"
-              OnValidSubmit="UpdateTicket" />
+  <div class="surface-card form-surface">
+    <TicketForm TicketModel="ticketToEdit"
+                CanEditStatus="canEditStatus"
+                SubmitButtonText="Save changes"
+                OnValidSubmit="UpdateTicket" />
+  </div>
 }
+
+</div>
 
 @code {
   [Parameter] public int Id { get; set; }
