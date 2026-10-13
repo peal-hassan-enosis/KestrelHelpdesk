@@ -51,11 +51,9 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
             EnsureSuccess(result, $"Could not remove role '{currentRole}'.");
         }
 
-        if (!currentRoles.Contains(role, StringComparer.Ordinal))
-        {
-            var result = await _userManager.AddToRoleAsync(user, role);
-            EnsureSuccess(result, $"Could not assign role '{role}'.");
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        var assignResult = await _userManager.AddToRoleAsync(user, role);
+        EnsureSuccess(assignResult, $"Could not assign role '{role}'.");
     }
 
     private async Task<IReadOnlyList<RoleManagementUser>> GetUsersAsync(
