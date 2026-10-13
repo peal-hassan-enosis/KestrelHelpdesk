@@ -50,9 +50,10 @@
         </div>
       </header>
 
-      <div class="card mb-4 shadow-sm border-0">
+      <div class="card mb-4 shadow-sm border-0 ticket-detail-card">
         <div class="card-body">
-          <p class="card-text fs-5">@ticket.Description</p>
+          <div class="ticket-section-heading"><span class="eyebrow">REQUEST SUMMARY</span><h2 class="card-title">Issue description</h2></div>
+          <p class="card-text fs-5 ticket-description">@ticket.Description</p>
           <div class="mt-4 d-flex gap-2 flex-wrap">
             <StatusBadge Status="@ticket.Status" />
             <PriorityBadge Priority="@ticket.Priority" />
@@ -66,9 +67,9 @@
 
       @if (ticket.Attachments.Any())
       {
-        <div class="card mb-4 shadow-sm border-0">
+        <div class="card mb-4 shadow-sm border-0 ticket-detail-card">
           <div class="card-body">
-            <h5 class="card-title">Attachments (@ticket.Attachments.Count)</h5>
+            <div class="ticket-section-heading"><span class="eyebrow">SUPPORTING FILES</span><h2 class="card-title">Attachments <span class="section-count">@ticket.Attachments.Count</span></h2></div>
             <div class="list-group list-group-flush">
               @foreach (var attachment in ticket.Attachments)
               {
@@ -85,13 +86,13 @@
         </div>
       }
 
-      <h4 class="mb-3">Comments (@ticket.Comments.Count)</h4>
+      <div class="ticket-section-heading comments-heading"><div><span class="eyebrow">CONVERSATION</span><h2 class="card-title">Comments <span class="section-count">@ticket.Comments.Count</span></h2></div></div>
       @if (ticket.Comments.Any())
       {
         <div class="comments-list mb-4">
           @foreach (var comment in ticket.Comments.OrderBy(c => c.CreatedAt))
           {
-            <div class="card shadow-sm border-0" @key="comment.Id">
+            <div class="card shadow-sm border-0 comment-card" @key="comment.Id">
               <div class="card-body py-3">
                 <div class="d-flex w-100 justify-content-between align-items-center mb-2">
                   <h6 class="mb-0 fw-bold">@comment.Author</h6>
@@ -106,9 +107,10 @@
         </div>
       }
 
-      <div class="card shadow-sm border-0 add-comment-card">
+      <div class="card shadow-sm border-0 add-comment-card ticket-detail-card">
         <div class="card-body">
-          <h5 class="card-title">Add a Comment</h5>
+          <span class="eyebrow">NEXT STEP</span><h2 class="card-title">Add a comment</h2>
+          <p class="text-muted small mb-3">Share an update or add details that help the team move this request forward.</p>
           <textarea class="form-control mb-3" rows="3" placeholder="Write a response..." @bind="newComment.Text" @bind:event="oninput"></textarea>
           <button class="btn btn-primary" @onclick="PostComment" disabled="@string.IsNullOrWhiteSpace(newComment.Text)">Post Comment</button>
         </div>
