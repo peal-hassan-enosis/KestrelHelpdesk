@@ -187,3 +187,47 @@ textarea.form-control{min-height:116px;resize:vertical}.form-control::placeholde
 .ticket-create-page .ticket-form, .ticket-edit-page .ticket-form { padding: 0; }
 .onboarding-card .card-body { padding: 0; }
 .request-id-line { display:inline-block; padding:8px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface-soft); font-size:11px; }
+
+
+/* Ticket details and attachment presentation */
+.ticket-section-heading { display:flex; flex-direction:column; gap:4px; margin-bottom:15px; }
+.ticket-section-heading .eyebrow { margin-bottom:0; }
+.ticket-section-heading .card-title { display:flex; align-items:center; gap:10px; margin:0; font-size:16px; }
+.section-count { display:inline-grid; min-width:23px; height:23px; padding:0 6px; place-items:center; border-radius:7px; color:var(--brand-700); background:#edf2ff; font-size:10px; font-weight:800; }
+.ticket-description { color:#43516a; font-size:15px!important; line-height:1.9; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ticket-details-page .list-group-item { border-color:#edf1f7; font-size:12px; }
+.ticket-details-page .list-group-item:first-child { border-top:0; }
+.comments-heading { margin-top:27px; margin-bottom:15px; }
+.add-comment-card { margin-top:12px; }
+.ticket-form-intro { margin:0 0 22px; padding:0 0 16px; border-bottom:1px solid var(--line); }
+.validation-summary-card { padding:13px 16px; }
+.ticket-form .row { row-gap:12px; }
+.attachment-section { padding-top:7px; }
+.file-upload-panel { display:flex!important; align-items:center; gap:13px; min-height:85px; padding:16px; border:1px dashed #bfcceb; border-radius:13px; color:var(--text); background:#f8faff; cursor:pointer; }
+.file-upload-panel:hover { border-color:#8098e7; background:#f0f4ff; }
+.file-upload-icon { display:grid; width:42px; height:42px; flex:0 0 42px; place-items:center; border-radius:12px; color:var(--brand-600); background:#e8eeff; }
+.file-upload-icon svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.file-upload-copy { display:flex; flex:1; flex-direction:column; gap:4px; }
+.file-upload-copy strong { color:#2a3a55; font-size:12px; font-weight:750; }
+.file-upload-copy small { color:var(--muted); font-size:10px; font-weight:450; }
+.file-upload-panel input[type=file] { width:min(215px,40%); color:var(--muted); font-size:10px; }
+.attachment-row { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:8px; padding:11px 13px; border:1px solid var(--line); border-radius:10px; color:#42516a; background:#fff; font-size:11px; overflow-wrap:anywhere; }
+.attachment-row-new { justify-content:flex-start; border-color:#dce6ff; background:#f7f9ff; }
+.form-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:18px; border-top:1px solid var(--line); }
+.ticket-create-page .surface-card, .ticket-edit-page .surface-card { overflow:hidden; }
+.import-page .form-surface { margin-bottom:16px; padding:clamp(17px,3vw,27px)!important; }
+.import-page .mud-input-control { width:100%; }
+.role-assignment-page .mud-paper { overflow:hidden; }
+.role-assignment-page .table { background:#fff; }
+.role-assignment-page .table thead th:first-child, .role-assignment-page .table tbody td:first-child { padding-left:20px; }
+.role-assignment-page .table thead th:last-child, .role-assignment-page .table tbody td:last-child { padding-right:20px; }
+.role-assignment-page .mud-progress-linear { border-radius:100px; }
+.role-pending-page .onboarding-card { border-radius:22px; }
+.role-pending-page .onboarding-card .btn { min-width:125px; }
+@media(max-width:560px) {
+  .file-upload-panel { align-items:flex-start; flex-wrap:wrap; }
+  .file-upload-panel input[type=file] { width:100%; margin-left:55px; }
+  .attachment-row { align-items:flex-start; }
+  .form-actions { flex-direction:column-reverse; align-items:stretch; }
+  .form-actions .btn { width:100%; }
+}
