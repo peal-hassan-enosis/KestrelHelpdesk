@@ -8,11 +8,6 @@ namespace KestrelHelpdesk.Web.Services;
 
 public sealed class TicketAttachmentService : ITicketAttachmentService
 {
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".zip"
-    };
-
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly IFileStorageService _fileStorage;
     private readonly Core.Interfaces.ITicketService _ticketService;
@@ -30,28 +25,6 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         _currentUser = currentUser;
     }
 
-    public IReadOnlyList<string> ValidateFiles(IReadOnlyList<IBrowserFile> files, int existingAttachmentCount = 0)
-    {
-        var errors = new List<string>();
-        var totalCount = existingAttachmentCount + files.Count;
-
-        if (totalCount > ITicketAttachmentService.MaxAttachmentsPerTicket)
-            errors.Add($"A ticket can have a maximum of {ITicketAttachmentService.MaxAttachmentsPerTicket} attachments.");
-
-        foreach (var file in files)
-        {
-            var extension = Path.GetExtension(file.Name);
-
-            if (!AllowedExtensions.Contains(extension))
-                errors.Add($"'{file.Name}' is not an allowed file type.");
-
-            if (file.Size > ITicketAttachmentService.MaxFileSize)
-                errors.Add($"'{file.Name}' exceeds the 10 MB file size limit.");
-        }
-
-        return errors;
-    }
-
     public async Task<IReadOnlyList<TicketAttachment>> AddAttachmentsAsync(
         int ticketId,
         IReadOnlyList<IBrowserFile> files,
@@ -63,7 +36,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         var user = await _currentUser.GetCurrentUserAsync()
             ?? throw new UnauthorizedAccessException("You must be signed in.");
 
-        var validationErrors = ValidateFiles(files, existingAttachmentCount);
+        var validationErrors = TicketAttachmentValidation.ValidateFiles(files, existingAttachmentCount);
         if (validationErrors.Count > 0)
             throw new InvalidOperationException(string.Join(" ", validationErrors));
 
@@ -80,7 +53,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                 cancellationToken.ThrowIfCancellationRequested();
                 var extension = Path.GetExtension(file.Name).ToLowerInvariant();
 
-                await using var source = file.OpenReadStream(ITicketAttachmentService.MaxFileSize, cancellationToken);
+                await using var source = file.OpenReadStream(TicketAttachmentValidation.MaxFileSize, cancellationToken);
                 var storagePath = await _fileStorage.SaveAsync(source, extension, cancellationToken);
                 savedPaths.Add(storagePath);
 
