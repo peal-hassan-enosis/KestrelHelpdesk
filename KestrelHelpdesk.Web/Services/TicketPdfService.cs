@@ -1,3 +1,5 @@
+using iText.IO.Font.Constants;
+using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Layout;
@@ -20,9 +22,11 @@ public sealed class TicketPdfService : ITicketPdfService
         using var pdf = new PdfDocument(writer);
         using var document = new Document(pdf, PageSize.A4.Rotate());
 
+        var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+
         document.SetMargins(20, 20, 20, 20);
         document.Add(new Paragraph(title)
-            .SetBold()
+            .SetFont(boldFont)
             .SetFontSize(15)
             .SetMarginBottom(4));
         document.Add(new Paragraph($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm}    Tickets: {rows.Count}")
@@ -32,12 +36,12 @@ public sealed class TicketPdfService : ITicketPdfService
         var table = new Table(new float[] { 0.7f, 3.2f, 1.3f, 1.2f, 1.8f, 1.8f })
             .SetWidth(UnitValue.CreatePercentValue(100));
 
-        AddHeader(table, "ID");
-        AddHeader(table, "Title");
-        AddHeader(table, "Status");
-        AddHeader(table, "Priority");
-        AddHeader(table, "Assigned To");
-        AddHeader(table, "Created");
+        AddHeader(table, "ID", boldFont);
+        AddHeader(table, "Title", boldFont);
+        AddHeader(table, "Status", boldFont);
+        AddHeader(table, "Priority", boldFont);
+        AddHeader(table, "Assigned To", boldFont);
+        AddHeader(table, "Created", boldFont);
 
         foreach (var row in rows)
         {
@@ -57,10 +61,10 @@ public sealed class TicketPdfService : ITicketPdfService
         return Task.FromResult(memoryStream.ToArray());
     }
 
-    private static void AddHeader(Table table, string value)
+    private static void AddHeader(Table table, string value, PdfFont boldFont)
     {
         table.AddHeaderCell(new Cell()
-            .Add(new Paragraph(value).SetBold().SetFontSize(8))
+            .Add(new Paragraph(value).SetFont(boldFont).SetFontSize(8))
             .SetTextAlignment(TextAlignment.CENTER));
     }
 
