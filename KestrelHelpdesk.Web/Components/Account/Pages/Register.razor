@@ -9,12 +9,24 @@
 @inject ILogger<Register> Logger
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Register - Kestrel Helpdesk</PageTitle>
 
-<h1>Register</h1>
-
-<div class="row">
-    <div class="col-lg-6">
+<div class="auth-page">
+    <aside class="auth-story">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M18 3.5 31 11v14L18 32.5 5 25V11Z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m12 22 4-10h4l4 10m-10-3h12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"/></svg></span>
+        <p class="eyebrow">GET STARTED</p>
+        <h1>Make support easier to follow.</h1>
+        <p>Create an account to submit requests and keep track of conversations and attachments in one place.</p>
+        <div class="auth-story-points">
+            <span class="auth-story-point">Submit clear, organized requests</span>
+            <span class="auth-story-point">Follow ticket status changes</span>
+            <span class="auth-story-point">Keep updates in context</span>
+        </div>
+    </aside>
+    <section class="auth-card">
+        <p class="eyebrow">CREATE ACCOUNT</p>
+        <h2>Register for Kestrel</h2>
+        <p class="auth-intro">Use your work email. A manager will assign your application role after registration.</p>
         <StatusMessage Message="@Message" />
         <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
@@ -38,7 +50,9 @@
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </EditForm>
-    </div>
+        <hr />
+        <p class="mb-0">Already have an account? <a href="/Account/Login">Sign in</a>.</p>
+    </section>
 </div>
 
 @code {
