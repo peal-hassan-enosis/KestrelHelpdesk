@@ -259,3 +259,13 @@ textarea.form-control{min-height:116px;resize:vertical}.form-control::placeholde
 .selected-file-row strong,.selected-file-row small { display:block; overflow-wrap:anywhere; }
 .selected-file-row strong { font-size:11px; font-weight:750; }
 .selected-file-row small { margin-top:3px; color:#5d8a77; font-size:10px; }
+
+/* Prevent nested card padding on ticket create/edit forms. */
+.ticket-create-page .surface-card > .ticket-form,
+.ticket-edit-page .surface-card > .ticket-form { padding:0; }
+@media(max-width:560px) {
+  .ticket-create-page .surface-card > .ticket-form,
+  .ticket-edit-page .surface-card > .ticket-form { padding:0; }
+}
+/* Keep the landing-page eyebrow distinct from the hero body copy. */
+.landing-hero-copy > p.eyebrow { max-width:unset; margin:0 0 9px; color:#a8c5ff; font-size:10px; font-weight:800; letter-spacing:.16em; line-height:1.55; text-transform:uppercase; }
