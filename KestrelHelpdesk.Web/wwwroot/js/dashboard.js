@@ -26,9 +26,39 @@ const countLabelsPlugin = {
 
 export function createStatusChart(canvasId, labels, values) {
   const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
+
+  if (!canvas) {
+    destroyChart();
+    return;
+  }
+
+  // Reuse the existing chart when the DOM canvas is still the same. Blazor can
+  // render the page again without replacing the canvas, so avoid rebuilding it
+  // unnecessarily while still recovering if navigation replaced the element.
+  if (chart && chart.canvas === canvas) {
+    const currentLabels = chart.data.labels ?? [];
+    const currentValues = chart.data.datasets?.[0]?.data ?? [];
+    const dataChanged =
+      labels.length !== currentLabels.length ||
+      labels.some((label, index) => label !== currentLabels[index]) ||
+      values.length !== currentValues.length ||
+      values.some((value, index) => value !== currentValues[index]);
+
+    if (dataChanged) {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = values;
+      chart.update("none");
+    }
+
+    return;
+  }
 
   chart?.destroy();
+  chart = null;
+
+  // Also clean up any Chart.js instance left on this canvas by a previous
+  // component/module instance.
+  Chart.getChart(canvas)?.destroy();
 
   chart = new Chart(canvas, {
     type: "bar",
