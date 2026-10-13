@@ -21,7 +21,7 @@ public sealed class TicketCommentService : ITicketCommentService
             ?? throw new UnauthorizedAccessException("You must be signed in.");
 
         var ticket = await _repository.GetTicketByIdAsync(ticketId);
-        if (ticket is null || !CanView(user, ticket))
+        if (ticket is null || !TicketAccessPolicy.CanView(user, ticket))
             throw new UnauthorizedAccessException("You are not allowed to comment on this ticket.");
 
         comment.TicketId = ticketId;
@@ -29,9 +29,4 @@ public sealed class TicketCommentService : ITicketCommentService
         comment.CreatedAt = DateTime.UtcNow;
         await _repository.AddCommentAsync(comment);
     }
-
-    private static bool CanView(CurrentUserInfo user, Ticket ticket) =>
-        user.IsInRole(AppRoles.Manager)
-        || ticket.CreatedBy == user.UserId
-        || (user.IsInRole(AppRoles.Agent) && ticket.AssignedToUserId == user.UserId);
 }
