@@ -11,7 +11,7 @@
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
+@attribute [Authorize(Roles = AppRoles.EmployeeAgentManager)]
 @rendermode InteractiveServer
 
 <PageTitle>Edit Ticket #@Id - Kestrel Helpdesk</PageTitle>
@@ -112,8 +112,8 @@ else
       await TicketAttachmentService.SaveTicketChangesAsync(
           submission.Ticket,
           isCreateMode: false,
-          submission.NewFiles,
-          submission.AttachmentIdsToDelete);
+          files: submission.NewFiles,
+          attachmentIdsToDelete: submission.AttachmentIdsToDelete);
 
       Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
     }
