@@ -1,4 +1,8 @@
 export function downloadPdf(fileName, base64Data) {
+    if (!fileName || !base64Data) {
+        throw new Error("A file name and PDF content are required.");
+    }
+
     const binary = atob(base64Data);
     const bytes = new Uint8Array(binary.length);
 
@@ -9,10 +13,18 @@ export function downloadPdf(fileName, base64Data) {
     const blob = new Blob([bytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+
     link.href = url;
     link.download = fileName;
-    link.click();
-    link.remove();
+    link.style.display = "none";
+    document.body.appendChild(link);
 
-    URL.revokeObjectURL(url);
+    try {
+        link.click();
+    } finally {
+        link.remove();
+
+        // Give the browser time to begin the download before revoking the object URL.
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 }
