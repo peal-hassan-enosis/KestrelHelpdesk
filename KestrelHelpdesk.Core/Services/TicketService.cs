@@ -93,7 +93,7 @@ public sealed class TicketService : ITicketService
         }
         else
         {
-            var existing = await GetTicketByIdAsync(ticket.Id)
+            var existing = await _repository.GetTicketByIdAsync(ticket.Id)
                 ?? throw new KeyNotFoundException($"Ticket {ticket.Id} was not found.");
 
             if (!TicketAccessPolicy.CanEdit(user, existing))
