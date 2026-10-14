@@ -20,9 +20,9 @@ public class Ticket
     // Priority is non-nullable, so the form always submits an explicit enum value.
     public TicketPriority Priority { get; set; }
 
-    // Nullable so the form can represent its unselected placeholder; [Required] rejects it on submit.
-    [Required(ErrorMessage = "Category is required.")]
-    public TicketCategory? Category { get; set; }
+    // The domain model stores only a valid category. The form uses a nullable selection
+    // so a user must choose a category instead of silently accepting the enum's default.
+    public TicketCategory Category { get; set; } = TicketCategory.Hardware;
 
     public TicketStatus Status { get; set; }
 
