@@ -1,4 +1,4 @@
-using System.Net.Mail;
+using System.Text.RegularExpressions;
 using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
 using iText.Kernel.Font;
@@ -13,6 +13,9 @@ namespace KestrelHelpdesk.Web.Services;
 
 public sealed class TicketPdfService : ITicketPdfService
 {
+    private static readonly Regex LinkableTextPattern = new(
+        @"(?<url>https?://[^\s<>""']+|www\.[^\s<>""']+)|(?<email>[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
     public byte[] Generate(
         IReadOnlyList<TicketPdfRow> rows,
         string title,
@@ -85,26 +88,45 @@ public sealed class TicketPdfService : ITicketPdfService
     {
         var text = value ?? string.Empty;
         var paragraph = new Paragraph().SetFontSize(8);
+        var matches = LinkableTextPattern.Matches(text);
 
-        // PAC identifies email addresses and URLs as linkable text. Tag those
-        // strings as real Link elements instead of leaving them as unstructured text.
-        if (MailAddress.TryCreate(text, out var emailAddress)
-            && string.Equals(emailAddress.Address, text, StringComparison.OrdinalIgnoreCase))
+        if (matches.Count == 0)
         {
-            paragraph.Add(new Link(text, PdfAction.CreateURI($"mailto:{text}"))
-                .SetFontColor(ColorConstants.BLUE)
-                .SetUnderline());
-        }
-        else if (Uri.TryCreate(text, UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
-        {
-            paragraph.Add(new Link(text, PdfAction.CreateURI(uri.AbsoluteUri))
-                .SetFontColor(ColorConstants.BLUE)
-                .SetUnderline());
+            paragraph.Add(text);
         }
         else
         {
-            paragraph.Add(text);
+            var cursor = 0;
+
+            foreach (Match match in matches)
+            {
+                if (match.Index > cursor)
+                    paragraph.Add(text[cursor..match.Index]);
+
+                // Don't include punctuation that follows a URL as part of its target.
+                var linkText = match.Value.TrimEnd('.', ',', ';', ':', '!', '?', ')', ']');
+                if (linkText.Length == 0)
+                {
+                    paragraph.Add(match.Value);
+                    cursor = match.Index + match.Length;
+                    continue;
+                }
+
+                var linkTarget = match.Groups["email"].Success
+                    ? $"mailto:{linkText}"
+                    : linkText.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+                        ? $"https://{linkText}"
+                        : linkText;
+
+                paragraph.Add(new Link(linkText, PdfAction.CreateURI(linkTarget))
+                    .SetFontColor(ColorConstants.BLUE)
+                    .SetUnderline());
+
+                cursor = match.Index + linkText.Length;
+            }
+
+            if (cursor < text.Length)
+                paragraph.Add(text[cursor..]);
         }
 
         table.AddCell(new Cell().Add(paragraph));
