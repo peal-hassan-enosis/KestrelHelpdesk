@@ -7,7 +7,7 @@
 @inject ILogger<NewTicket> Logger
 @inject NavigationManager Nav
 
-@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
+@attribute [Authorize(Roles = AppRoles.EmployeeAgentManager)]
 @rendermode InteractiveServer
 
 <PageTitle>Create New Ticket</PageTitle>
@@ -47,8 +47,8 @@
             await TicketAttachmentService.SaveTicketChangesAsync(
                 submission.Ticket,
                 isCreateMode: true,
-                submission.NewFiles,
-                submission.AttachmentIdsToDelete);
+                files: submission.NewFiles,
+                attachmentIdsToDelete: submission.AttachmentIdsToDelete);
 
             Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
         }
