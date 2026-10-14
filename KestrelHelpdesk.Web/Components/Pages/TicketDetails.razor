@@ -135,6 +135,7 @@
   private Comment newComment = new();
   private bool notFound;
   private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
+  private IReadOnlyList<AssignableUser> formerAssignees = Array.Empty<AssignableUser>();
 
   protected override async Task OnInitializedAsync()
   {
@@ -165,10 +166,32 @@
   {
     ticket = await TicketService.GetTicketByIdAsync(Id);
     notFound = ticket is null;
+
+    if (ticket?.AssignedToUserId is { Length: > 0 } assignedUserId &&
+        agents.All(agent => agent.Id != assignedUserId))
+    {
+      formerAssignees = await UserDirectory.GetUsersByIdsAsync([assignedUserId]);
+    }
+    else
+    {
+      formerAssignees = Array.Empty<AssignableUser>();
+    }
   }
 
-  private string GetAssigneeName(string? userId) =>
-    string.IsNullOrWhiteSpace(userId) ? "-" : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "Unknown agent";
+  private string GetAssigneeName(string? userId)
+  {
+    if (string.IsNullOrWhiteSpace(userId))
+      return "-";
+
+    var activeAgent = agents.FirstOrDefault(agent => agent.Id == userId);
+    if (activeAgent is not null)
+      return activeAgent.DisplayName;
+
+    var formerAssignee = formerAssignees.FirstOrDefault(user => user.Id == userId);
+    return formerAssignee is null
+      ? AppConstants.UnknownAgent
+      : $"{formerAssignee.DisplayName} (not an active agent)";
+  }
 
   private async Task PostComment()
   {
