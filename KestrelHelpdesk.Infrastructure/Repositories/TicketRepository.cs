@@ -170,6 +170,15 @@ public class TicketRepository : ITicketRepository
                 context.TicketAttachments.RemoveRange(removedAttachments);
             }
 
+            var currentAttachmentCount = await context.TicketAttachments
+                .CountAsync(attachment => attachment.TicketId == ticket.Id, cancellationToken);
+            var finalAttachmentCount = currentAttachmentCount - deleteIds.Length + attachmentsToAdd.Count;
+            if (finalAttachmentCount > TicketAttachmentPolicy.MaxFilesPerTicket)
+            {
+                throw new ValidationException(
+                    $"A ticket can have a maximum of {TicketAttachmentPolicy.MaxFilesPerTicket} attachments.");
+            }
+
             foreach (var attachment in attachmentsToAdd)
             {
                 attachment.TicketId = ticket.Id;
