@@ -31,6 +31,8 @@ public partial class Tickets : IAsyncDisposable
 
     private MudDataGrid<Ticket>? grid;
     private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
+    private IReadOnlyList<AssignableUser> formerAssignees = Array.Empty<AssignableUser>();
+    private string? assignmentErrorMessage;
     private IReadOnlyList<Ticket> currentPageTickets = Array.Empty<Ticket>();
     private TicketScope activeScope = TicketScope.EmployeeOwn;
     private bool isAgent;
@@ -85,6 +87,16 @@ public partial class Tickets : IAsyncDisposable
             currentSortDescending);
 
         currentPageTickets = items;
+
+        var activeAgentIds = agents.Select(agent => agent.Id).ToHashSet(StringComparer.Ordinal);
+        var formerAssigneeIds = items
+            .Select(ticket => ticket.AssignedToUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !activeAgentIds.Contains(id))
+            .Select(id => id!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        formerAssignees = await UserDirectory.GetUsersByIdsAsync(formerAssigneeIds);
         return new GridData<Ticket> { Items = items, TotalItems = totalCount };
     }
 
@@ -211,7 +223,7 @@ public partial class Tickets : IAsyncDisposable
 
         try
         {
-            await Task.Delay(300, token);
+            await Task.Delay(AppConstants.SearchDebounceMilliseconds, token);
             searchTerm = searchText.Trim();
             await RefreshGrid();
         }
@@ -222,20 +234,69 @@ public partial class Tickets : IAsyncDisposable
 
     private async Task ManagerAssignmentChanged(int ticketId, ChangeEventArgs e)
     {
-        await TicketAssignmentService.AssignTicketAsync(ticketId, e.Value?.ToString());
-        await RefreshGrid();
+        await UpdateAssignmentAsync(
+            () => TicketAssignmentService.AssignTicketAsync(ticketId, e.Value?.ToString()));
     }
 
     private async Task AssignToMe(int ticketId, string? agentUserId)
     {
-        await TicketAssignmentService.AssignTicketAsync(ticketId, agentUserId);
-        await RefreshGrid();
+        await UpdateAssignmentAsync(() => TicketAssignmentService.AssignTicketAsync(ticketId, agentUserId));
     }
 
-    private string GetAssigneeName(string? userId) =>
-        string.IsNullOrWhiteSpace(userId)
-            ? "-"
-            : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "Unknown agent";
+    private async Task UpdateAssignmentAsync(Func<Task> update)
+    {
+        assignmentErrorMessage = null;
+
+        try
+        {
+            await update();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(ex, "The current user was not authorized to change a ticket assignment.");
+            assignmentErrorMessage = "You are not allowed to make that assignment change.";
+            return;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            Logger.LogWarning(ex, "Assignment update referenced a missing ticket or user.");
+            assignmentErrorMessage = "The ticket or selected agent no longer exists. Refresh the board and try again.";
+            return;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to change a ticket assignment.");
+            assignmentErrorMessage = Environment.IsDevelopment()
+                ? $"The assignment could not be updated: {ex.GetBaseException().Message}"
+                : "The assignment could not be updated. Please refresh the board and try again.";
+            return;
+        }
+
+        try
+        {
+            await RefreshGrid();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Assignment was saved, but the ticket grid could not refresh.");
+            assignmentErrorMessage = "The assignment was saved, but the board could not refresh. Reload the page to see the latest state.";
+        }
+    }
+
+    private string GetAssigneeName(string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return "-";
+
+        var activeAgent = agents.FirstOrDefault(agent => agent.Id == userId);
+        if (activeAgent is not null)
+            return activeAgent.DisplayName;
+
+        var formerAssignee = formerAssignees.FirstOrDefault(user => user.Id == userId);
+        return formerAssignee is null
+            ? $"Former assignee ({userId})"
+            : $"{formerAssignee.DisplayName} (not an active agent)";
+    }
 
     private static Color GetStatusColor(TicketStatus status) => status switch
     {
