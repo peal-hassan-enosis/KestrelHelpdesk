@@ -14,23 +14,6 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
     private const int JpegQuality = 88;
     private const int WebpQuality = 88;
 
-    public async Task ValidateAsync(
-        Stream source,
-        string extension,
-        CancellationToken cancellationToken = default)
-    {
-        if (!TicketAttachmentPolicy.IsImageExtension(extension))
-            return;
-
-        var bytes = await ReadSourceAsync(source, cancellationToken);
-        using var codec = CreateCodec(bytes);
-        EnsureSupportedStillImage(codec, extension);
-
-        using var bitmap = SKBitmap.Decode(codec);
-        if (bitmap is null || bitmap.Width <= 0 || bitmap.Height <= 0)
-            throw InvalidImage();
-    }
-
     public async Task<ProcessedAttachmentImage?> ProcessAsync(
         Stream source,
         string extension,
@@ -40,7 +23,8 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
             return null;
 
         var bytes = await ReadSourceAsync(source, cancellationToken);
-        using var codec = CreateCodec(bytes);
+        using var metadataStream = new MemoryStream(bytes, writable: false);
+        using var codec = SKCodec.Create(metadataStream) ?? throw InvalidImage();
         EnsureSupportedStillImage(codec, extension);
 
         var info = codec.Info;
@@ -53,6 +37,10 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
             throw InvalidImage();
 
         var sourceFormat = GetFormat(codec.EncodedFormat, extension);
+
+        // Decode independently of the metadata codec, because checking frame count may
+        // consume the codec stream. Even images below the dimension limit must be valid.
+        using var decoded = SKBitmap.Decode(bytes) ?? throw InvalidImage();
 
         // Small, valid images are stored byte-for-byte as the single stored output.
         // Their metadata is still derived from the detected file format and dimensions.
@@ -70,10 +58,6 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
 
         try
         {
-            using var decoded = SKBitmap.Decode(codec);
-            if (decoded is null)
-                throw InvalidImage();
-
             using var oriented = ApplyOrientation(decoded, origin);
             var scale = TicketAttachmentPolicy.MaxImageLongestSide /
                         (double)Math.Max(oriented.Width, oriented.Height);
@@ -117,19 +101,6 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
         await using var buffer = new MemoryStream();
         await source.CopyToAsync(buffer, cancellationToken);
         return buffer.ToArray();
-    }
-
-    private static SKCodec CreateCodec(byte[] bytes)
-    {
-        var stream = new MemoryStream(bytes, writable: false);
-        var codec = SKCodec.Create(stream);
-        if (codec is null)
-        {
-            stream.Dispose();
-            throw InvalidImage();
-        }
-
-        return codec;
     }
 
     private static void EnsureSupportedStillImage(SKCodec codec, string extension)
