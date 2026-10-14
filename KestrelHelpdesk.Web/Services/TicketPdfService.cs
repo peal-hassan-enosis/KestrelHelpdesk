@@ -1,3 +1,4 @@
+using System.Globalization;
 using iText.IO.Font;
 using iText.Kernel.Colors;
 using iText.Kernel.Font;
@@ -64,8 +65,11 @@ public sealed class TicketPdfService : ITicketPdfService
             heading.GetAccessibilityProperties().SetRole(StandardRoles.H1);
             document.Add(heading);
 
+            var generatedAt = DateTimeOffset.Now.ToString(
+                "MMMM d, yyyy 'at' h:mm tt",
+                CultureInfo.GetCultureInfo(DocumentLanguage));
             document.Add(new Paragraph(
-                    $"Generated {DateTimeOffset.Now:MMMM d, yyyy 'at' h:mm tt}. This export contains {rows.Count} ticket(s).")
+                    $"Generated {generatedAt}. This export contains {rows.Count} ticket(s).")
                 .SetFont(regularFont)
                 .SetFontSize(10)
                 .SetFontColor(BodyForeground)
