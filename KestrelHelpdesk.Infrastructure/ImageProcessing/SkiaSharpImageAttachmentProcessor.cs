@@ -62,9 +62,21 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
 
             using var resizeStream = new MemoryStream(bytes, writable: false);
             using var resizeCodec = SKCodec.Create(resizeStream) ?? throw InvalidImage();
-            using var decoded = SKBitmap.Decode(
-                resizeCodec,
-                new SKImageInfo(targetRawWidth, targetRawHeight)) ?? throw InvalidImage();
+            var targetInfo = new SKImageInfo(targetRawWidth, targetRawHeight);
+
+            // Some codecs (including some JPEG dimension/scale combinations) cannot decode
+            // directly into arbitrary target dimensions. Try the lower-memory scaled decode
+            // first, then fall back to a normal decode and explicit resize for valid images.
+            var decodedBitmap = SKBitmap.Decode(resizeCodec, targetInfo);
+            if (decodedBitmap is null)
+            {
+                using var fullResolution = SKBitmap.Decode(bytes) ?? throw InvalidImage();
+                decodedBitmap = fullResolution.Resize(
+                    targetInfo,
+                    new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+            }
+
+            using var decoded = decodedBitmap ?? throw InvalidImage();
             using var resized = ApplyOrientation(decoded, origin);
 
             // SkiaSharp does not encode GIF animation. A static GIF that needs resizing
