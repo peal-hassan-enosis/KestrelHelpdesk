@@ -1,10 +1,10 @@
 @page "/tickets/new"
 @using KestrelHelpdesk.Core.Authorization
-@using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
+@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
-@inject ITicketService TicketService
 @inject ITicketAttachmentService TicketAttachmentService
+@inject ILogger<NewTicket> Logger
 @inject NavigationManager Nav
 
 @attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
@@ -19,21 +19,55 @@
         <p class="page-subtitle">Describe the issue, choose a category and priority, and add any helpful attachments. New tickets start as Open.</p>
     </header>
     <div class="surface-card form-surface">
-        <TicketForm TicketModel="newTicket" IsCreateMode="true" SubmitButtonText="Create ticket" OnValidSubmit="CreateTicket" />
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@errorMessage</MudAlert>
+        }
+        <TicketForm TicketModel="newTicket" IsCreateMode="true"
+                    SubmitButtonText="@(isSaving ? "Creating..." : "Create ticket")"
+                    OnValidSubmit="CreateTicket" />
     </div>
 </div>
 
 @code {
     private Ticket newTicket = new();
+    private bool isSaving;
+    private string? errorMessage;
 
     private async Task CreateTicket(TicketFormSubmission submission)
     {
-        await TicketService.CreateTicketAsync(submission.Ticket);
-        await TicketAttachmentService.ApplyChangesAsync(
-            submission.Ticket.Id,
-            submission.NewFiles,
-            submission.AttachmentIdsToDelete);
+        if (isSaving)
+            return;
 
-        Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            await TicketAttachmentService.SaveTicketChangesAsync(
+                submission.Ticket,
+                isCreateMode: true,
+                submission.NewFiles,
+                submission.AttachmentIdsToDelete);
+
+            Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+        }
+        catch (ValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = "Your account is not allowed to create this ticket.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create a ticket with its attachments.");
+            errorMessage = "The ticket could not be created. Please try again.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 }
