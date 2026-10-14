@@ -82,6 +82,9 @@ public sealed class TicketService : ITicketService
 
         if (isCreate)
         {
+            // Reset the key before a retry in case an earlier failed transaction had
+            // populated the generated ID on the in-memory form model.
+            ticket.Id = 0;
             ValidateTicket(ticket);
             ticket.CreatedBy = user.UserId;
             ticket.Status = TicketStatus.Open;
