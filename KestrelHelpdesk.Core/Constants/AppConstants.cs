@@ -4,6 +4,7 @@ public static class AppConstants
 {
     public const string UnknownAgent = "Unknown agent";
     public const int SearchDebounceMilliseconds = 300;
+    public const long ExcelImportMaxFileSizeBytes = 10 * 1024 * 1024;
 
     public static class TicketBoard
     {
