@@ -1,6 +1,6 @@
 using Bunit;
 using KestrelHelpdesk.Core.Models;
-using KestrelHelpdesk.Web.Components.UI;
+using KestrelHelpdesk.Web.Components.Helper;
 using Xunit;
 
 namespace KestrelHelpdesk.Tests.Components;
