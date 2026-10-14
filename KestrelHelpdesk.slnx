@@ -2,4 +2,6 @@
   <Project Path="KestrelHelpdesk.Core/KestrelHelpdesk.Core.csproj" />
   <Project Path="KestrelHelpdesk.Infrastructure/KestrelHelpdesk.Infrastructure.csproj" />
   <Project Path="KestrelHelpdesk.Web/KestrelHelpdesk.Web.csproj" />
+  <Project Path="KestrelHelpdesk.Tests/KestrelHelpdesk.Tests.csproj" />
+  <Project Path="KestrelHelpdesk.E2E/KestrelHelpdesk.E2E.csproj" />
 </Solution>
