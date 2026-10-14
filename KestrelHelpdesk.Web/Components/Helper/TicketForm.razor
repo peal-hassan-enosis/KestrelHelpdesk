@@ -205,7 +205,7 @@
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Failed to validate attachments for ticket {TicketId}.", IsCreateMode ? null : TicketModel.Id);
+      Logger.LogError(ex, "Failed to validate attachments for ticket {TicketId}.", IsCreateMode ? 0 : TicketModel.Id);
       attachmentError = "The attachments could not be validated. Please try again.";
     }
   }
