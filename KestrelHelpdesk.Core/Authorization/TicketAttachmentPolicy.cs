@@ -25,6 +25,15 @@ public static class TicketAttachmentPolicy
             [".zip"] = "application/zip"
         };
 
+    public const int MaxImageLongestSide = 1600;
+
+    public static bool IsImageExtension(string extension) =>
+        extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".gif", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
+
     public static bool TryGetContentType(string extension, out string contentType) =>
         ContentTypes.TryGetValue(extension, out contentType!);
 }
