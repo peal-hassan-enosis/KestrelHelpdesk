@@ -1,4 +1,5 @@
 using Bunit;
+using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Models;
 using KestrelHelpdesk.Web.Components.Helper;
 using KestrelHelpdesk.Web.Services;
@@ -54,8 +55,8 @@ public class TicketFormTests : BunitContext
 
     private sealed class TestTicketAttachmentService : ITicketAttachmentService
     {
-        public long MaxFileSize => 10 * 1024 * 1024;
-        public int MaxFilesPerTicket => 3;
+        public long MaxFileSize => TicketAttachmentPolicy.MaxFileSize;
+        public int MaxFilesPerTicket => TicketAttachmentPolicy.MaxFilesPerTicket;
 
         public Task<IReadOnlyList<string>> ValidateFilesAsync(
             int ticketId,
@@ -64,8 +65,9 @@ public class TicketFormTests : BunitContext
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
 
-        public Task ApplyChangesAsync(
-            int ticketId,
+        public Task SaveTicketChangesAsync(
+            Ticket ticket,
+            bool isCreateMode,
             IReadOnlyList<IBrowserFile> files,
             IReadOnlyCollection<int> attachmentIdsToDelete,
             CancellationToken cancellationToken = default) =>
