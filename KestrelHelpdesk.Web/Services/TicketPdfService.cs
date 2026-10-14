@@ -6,6 +6,7 @@ using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Action;
+using iText.Kernel.Pdf.Annot;
 using iText.Kernel.Pdf.Navigation;
 using iText.Kernel.Pdf.Tagging;
 using iText.Layout;
@@ -208,20 +209,23 @@ public sealed class TicketPdfService : ITicketPdfService
                     ? $"https://{linkText}"
                     : linkText;
 
-            var link = new Link(linkText, PdfAction.CreateURI(target))
+            var accessibleDescription = isEmail
+                ? $"Email {linkText}"
+                : $"Open link {linkText}";
+
+            // Build the actual annotation before wrapping it in a Link element.
+            // Setting Contents on a Link's lazily generated annotation can be lost when
+            // the layout renderer creates the final page annotation. PDF/UA-1 requires
+            // the final Link annotation dictionary itself to contain a non-empty /Contents.
+            var linkAnnotation = new PdfLinkAnnotation(new Rectangle(0, 0));
+            linkAnnotation.SetAction(PdfAction.CreateURI(target));
+            linkAnnotation.SetContents(accessibleDescription);
+
+            var link = new Link(linkText, linkAnnotation)
                 .SetFont(font)
                 .SetFontSize(fontSize)
                 .SetFontColor(LinkForeground);
 
-            // Give the link annotation an accessible alternate description. PDF/UA requires
-            // link annotations to have contents or an Alt entry on the enclosing structure element.
-            var accessibleDescription = isEmail
-                ? $"Email {linkText}"
-                : $"Open link {linkText}";
-            // PDF/UA requires the PDF Link annotation dictionary itself to contain
-            // a /Contents description. The structure element's /Alt value alone does
-            // not satisfy this requirement, so set both properties explicitly.
-            link.GetLinkAnnotation().SetContents(accessibleDescription);
             link.GetAccessibilityProperties()
                 .SetRole(StandardRoles.LINK)
                 .SetAlternateDescription(accessibleDescription);
