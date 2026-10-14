@@ -156,7 +156,7 @@
         }
         else
         {
-            await module.InvokeVoidAsync("destroyChart");
+            await module.InvokeVoidAsync("destroyChart", chartCanvasId);
         }
     }
 
@@ -169,7 +169,7 @@
         {
             try
             {
-                await module.InvokeVoidAsync("destroyChart");
+                await module.InvokeVoidAsync("destroyChart", chartCanvasId);
                 await module.DisposeAsync();
             }
             catch (JSDisconnectedException) { }
