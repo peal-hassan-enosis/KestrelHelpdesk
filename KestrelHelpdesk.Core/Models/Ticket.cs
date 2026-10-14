@@ -20,6 +20,7 @@ public class Ticket
     [Required(ErrorMessage = "Priority is required.")]
     public TicketPriority Priority { get; set; }
 
+    // Nullable so the form can represent its unselected placeholder; [Required] rejects it on submit.
     [Required(ErrorMessage = "Category is required.")]
     public TicketCategory? Category { get; set; }
 
