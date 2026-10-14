@@ -8,10 +8,10 @@ namespace KestrelHelpdesk.Tests.Components;
 public class PriorityBadgeTests : BunitContext
 {
     [Theory]
-    [InlineData(TicketPriority.Low, "bg-info")]
-    [InlineData(TicketPriority.Medium, "bg-secondary")]
-    [InlineData(TicketPriority.High, "bg-warning")]
-    [InlineData(TicketPriority.Critical, "bg-danger")]
+    [InlineData(TicketPriority.Low, "priority-low")]
+    [InlineData(TicketPriority.Medium, "priority-medium")]
+    [InlineData(TicketPriority.High, "priority-high")]
+    [InlineData(TicketPriority.Critical, "priority-critical")]
     public void RendersExpectedCssClassForPriority(TicketPriority priority, string expectedClass)
     {
         // Act
@@ -19,7 +19,7 @@ public class PriorityBadgeTests : BunitContext
             .Add(p => p.Priority, priority));
 
         // Assert
-        var badge = cut.Find("span.badge");
+        var badge = cut.Find("span.ticket-priority-badge");
         Assert.Contains(expectedClass, badge.ClassList);
         Assert.Equal(priority.ToString(), badge.TextContent.Trim());
     }
