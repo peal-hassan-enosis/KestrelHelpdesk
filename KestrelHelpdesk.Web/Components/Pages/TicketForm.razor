@@ -72,7 +72,11 @@
     <div class="ticket-section-heading"><span class="eyebrow">FILES &amp; EVIDENCE</span><h2 class="card-title">Attachments</h2></div>
     <label class="file-upload-panel">
       <span class="file-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg></span>
-      <span class="file-upload-copy"><strong>Select supporting files</strong><small>PDF, images, Office files, CSV, text or ZIP · Up to 3 files, 10 MB each</small></span>
+      <span class="file-upload-copy">
+        <strong>Select supporting files</strong>
+        <small>PDF, images, Office files, CSV, text or ZIP · Up to 3 files, 10 MB each</small>
+        <small class="file-upload-image-note">Images with a longest side over 1600 px are automatically resized proportionally. Animated images aren't supported.</small>
+      </span>
       <InputFile OnChange="HandleFilesSelected" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" />
     </label>
 
