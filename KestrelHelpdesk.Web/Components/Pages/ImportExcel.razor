@@ -151,7 +151,7 @@
         }
         catch (IOException)
         {
-            _errorMessage = "The Excel file could not be read. Make sure it is an .xlsx file and is smaller than @(MaxFileSize / (1024 * 1024)) MB.";
+            _errorMessage = $"The Excel file could not be read. Make sure it is an .xlsx file and is smaller than {MaxFileSize / (1024 * 1024)} MB.";
         }
         catch (Exception ex)
         {
