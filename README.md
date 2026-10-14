@@ -77,12 +77,16 @@ The aim is to make status, ownership, and request history easy to understand. Au
 ### Attachments
 
 - Up to **3 attachments per ticket**.
-- Maximum **10 MB per file**.
+- Maximum **10 MB per uploaded file**.
 - Supported extensions: .pdf, .png, .jpg, .jpeg, .gif, .webp, .txt, .csv, .doc, .docx, .xls, .xlsx, .ppt, .pptx, and .zip.
+- Image uploads support PNG, JPG/JPEG, GIF, and WebP **still images**. Animated images are not supported and are rejected during validation.
+- The maximum stored image dimension is **1600 pixels on the longest side**. Larger images are resized proportionally; smaller images are not enlarged.
+- Only one image file is stored per attachment. When resizing is needed, the resized output is saved instead of retaining an additional copy of the uploaded original. Static GIFs that need resizing are stored as PNG because the image processor emits a non-animated output.
+- Attachment metadata (filename/extension, content type, and file size) is calculated from the actual stored output. For example, if a resized GIF becomes PNG, its stored/download filename and content type use the .png / image/png format.
 - Files are stored in a non-public server-side directory, not under wwwroot.
-- SQL Server stores metadata such as the original filename, generated stored filename, content type, size, uploader, upload time, and ticket relationship.
+- SQL Server stores metadata such as the filename used for download, generated stored filename, content type, stored file size, uploader, upload time, and ticket relationship.
 - Download requests require authentication and verify ticket access before returning the file.
-- The form validates file count, size, extension, and requested attachment changes.
+- The form validates file count, size, extension, image content, and requested attachment changes.
 
 ### Excel ticket import
 
@@ -178,6 +182,7 @@ KestrelHelpdesk/
 ├── KestrelHelpdesk.Infrastructure/
 │   ├── Data/                # EF Core ApplicationDbContext
 │   ├── FileStorage/         # Local non-public attachment storage
+│   ├── ImageProcessing/     # Still-image validation and proportional resizing
 │   ├── Identity/            # Identity user, seeding, directory and role management
 │   ├── Migrations/          # EF Core migrations and model snapshot
 │   └── Repositories/        # SQL Server/EF Core data access
@@ -222,7 +227,7 @@ flowchart TD
 - **Authentication/authorization:** ASP.NET Core Identity cookie authentication and role-based authorization for Employee, Agent, and Manager.
 - **Persistence:** EF Core 10 and SQL Server, configured through ApplicationDbContext and IDbContextFactory.
 - **Core services:** Ticket CRUD/access checks, query/paging, assignment, comments, and import validation.
-- **Infrastructure services:** SQL repositories, Identity seeding and role management, and file storage.
+- **Infrastructure services:** SQL repositories, Identity seeding and role management, file storage, and SkiaSharp image processing.
 - **Excel:** NPOI reads and validates .xlsx workbooks.
 - **PDF:** iText generates export documents.
 - **Charts:** Chart.js renders dashboard status charts in the browser.
