@@ -6,9 +6,11 @@ using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Tagging;
 using iText.Layout;
+using iText.Layout.Borders;
 using iText.Layout.Element;
 using iText.Layout.Properties;
 using iText.Pdfua;
+using IOPath = System.IO.Path;
 
 namespace KestrelHelpdesk.Web.Services;
 
@@ -128,7 +130,7 @@ public sealed class TicketPdfService : ITicketPdfService
                 .SetFontSize(10)
                 .SetFontColor(HeaderForeground))
             .SetBackgroundColor(HeaderBackground)
-            .SetBorderColor(BorderColor)
+            .SetBorder(new SolidBorder(BorderColor, 0.5f))
             .SetPaddingTop(8)
             .SetPaddingBottom(8)
             .SetPaddingLeft(7)
@@ -152,7 +154,7 @@ public sealed class TicketPdfService : ITicketPdfService
                 .SetFont(regularFont)
                 .SetFontSize(9.5f)
                 .SetFontColor(BodyForeground))
-            .SetBorderColor(BorderColor)
+            .SetBorder(new SolidBorder(BorderColor, 0.5f))
             .SetPaddingTop(7)
             .SetPaddingBottom(7)
             .SetPaddingLeft(7)
@@ -174,20 +176,27 @@ public sealed class TicketPdfService : ITicketPdfService
     {
         var windowsFonts = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
 
-        var candidates = OperatingSystem.IsWindows()
-            ? new[]
+        (string Regular, string Bold)[] candidates;
+
+        if (OperatingSystem.IsWindows())
+        {
+            candidates = new (string Regular, string Bold)[]
             {
-                (Path.Combine(windowsFonts, "arial.ttf"), Path.Combine(windowsFonts, "arialbd.ttf")),
-                (Path.Combine(windowsFonts, "segoeui.ttf"), Path.Combine(windowsFonts, "segoeuib.ttf")),
-                (Path.Combine(windowsFonts, "calibri.ttf"), Path.Combine(windowsFonts, "calibrib.ttf"))
-            }
-            : new[]
+                (IOPath.Combine(windowsFonts, "arial.ttf"), IOPath.Combine(windowsFonts, "arialbd.ttf")),
+                (IOPath.Combine(windowsFonts, "segoeui.ttf"), IOPath.Combine(windowsFonts, "segoeuib.ttf")),
+                (IOPath.Combine(windowsFonts, "calibri.ttf"), IOPath.Combine(windowsFonts, "calibrib.ttf"))
+            };
+        }
+        else
+        {
+            candidates = new (string Regular, string Bold)[]
             {
                 ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
                 ("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"),
                 ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
                 ("/System/Library/Fonts/Supplemental/Arial.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf")
             };
+        }
 
         foreach (var (regular, bold) in candidates)
         {
