@@ -30,6 +30,15 @@
     </div>
   </header>
 
+  @if (!string.IsNullOrWhiteSpace(assignmentErrorMessage))
+  {
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4"
+              ShowCloseIcon="true" CloseIcon="@Icons.Material.Filled.Close"
+              OnClose="@(() => assignmentErrorMessage = null)">
+      @assignmentErrorMessage
+    </MudAlert>
+  }
+
   @if (!string.IsNullOrWhiteSpace(exportErrorMessage))
   {
     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4" ShowCloseIcon="true" CloseIcon="@Icons.Material.Filled.Close" OnClose="@(() => exportErrorMessage = null)">
@@ -97,6 +106,13 @@
           <AuthorizeView Roles="Manager">
             <select class="form-select form-select-sm" value="@cell.Item.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(cell.Item.Id, e)">
               <option value="">Unassigned</option>
+              @if (!string.IsNullOrWhiteSpace(cell.Item.AssignedToUserId) && agents.All(agent => agent.Id != cell.Item.AssignedToUserId))
+              {
+                var formerAssignee = formerAssignees.FirstOrDefault(user => user.Id == cell.Item.AssignedToUserId);
+                <option value="@cell.Item.AssignedToUserId">
+                  @(formerAssignee is null ? $"Former assignee ({cell.Item.AssignedToUserId})" : $"{formerAssignee.DisplayName} (not an active agent)")
+                </option>
+              }
               @foreach (var agent in agents)
               {
                 <option value="@agent.Id">@agent.DisplayName</option>
