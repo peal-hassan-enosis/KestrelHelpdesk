@@ -22,14 +22,17 @@
   <div class="row mb-3">
     <div class="col-md-6">
       <label for="ticket-category" class="form-label fw-bold">Category</label>
-      <InputSelect id="ticket-category" @bind-Value="TicketModel.Category" class="form-select">
+      <InputSelect T="TicketCategory?" id="ticket-category" @bind-Value="selectedCategory" class="form-select @(categoryError is null ? "" : "is-invalid")">
         <option value="">-- Select Category --</option>
         @foreach (var cat in Enum.GetValues<TicketCategory>())
         {
           <option value="@cat">@cat</option>
         }
       </InputSelect>
-      <ValidationMessage For="@(() => TicketModel.Category)" class="text-danger small" />
+      @if (!string.IsNullOrWhiteSpace(categoryError))
+      {
+        <div class="text-danger small">@categoryError</div>
+      }
     </div>
     <div class="col-md-6">
       <label for="ticket-priority" class="form-label fw-bold">Priority</label>
@@ -131,6 +134,13 @@
   private List<IBrowserFile> selectedFiles = new();
   private HashSet<int> attachmentsToDelete = new();
   private string? attachmentError;
+  private TicketCategory? selectedCategory;
+  private string? categoryError;
+
+  protected override void OnInitialized()
+  {
+    selectedCategory = IsCreateMode ? null : TicketModel.Category;
+  }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -169,6 +179,15 @@
   private async Task HandleValidSubmit()
   {
     attachmentError = null;
+    categoryError = null;
+
+    if (selectedCategory is null)
+    {
+      categoryError = "Category is required.";
+      return;
+    }
+
+    TicketModel.Category = selectedCategory.Value;
 
     try
     {
