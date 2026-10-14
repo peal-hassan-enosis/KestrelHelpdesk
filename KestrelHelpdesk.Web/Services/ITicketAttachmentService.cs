@@ -13,8 +13,9 @@ public interface ITicketAttachmentService
         IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default);
 
-    Task ApplyChangesAsync(
-        int ticketId,
+    Task SaveTicketChangesAsync(
+        KestrelHelpdesk.Core.Models.Ticket ticket,
+        bool isCreateMode,
         IReadOnlyList<IBrowserFile> files,
         IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default);
