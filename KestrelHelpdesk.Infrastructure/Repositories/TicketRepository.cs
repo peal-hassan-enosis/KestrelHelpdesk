@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
