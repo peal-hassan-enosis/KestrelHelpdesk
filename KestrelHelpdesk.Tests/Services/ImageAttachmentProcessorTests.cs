@@ -1,4 +1,3 @@
-using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Infrastructure.ImageProcessing;
 using SkiaSharp;
 
@@ -23,7 +22,8 @@ public sealed class ImageAttachmentProcessorTests
         Assert.Equal(".jpg", processed.Extension);
         Assert.Equal("image/jpeg", processed.ContentType);
 
-        using var codec = SKCodec.Create(new MemoryStream(processed.Content));
+        using var outputStream = new MemoryStream(processed.Content, writable: false);
+        using var codec = SKCodec.Create(outputStream);
         Assert.NotNull(codec);
         Assert.Equal(1600, codec.Info.Width);
         Assert.Equal(800, codec.Info.Height);
