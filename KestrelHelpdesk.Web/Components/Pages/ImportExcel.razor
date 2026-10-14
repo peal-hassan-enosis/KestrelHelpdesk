@@ -27,7 +27,7 @@
         <p class="text-muted small mb-3">Select a validated .xlsx workbook. The import review will show any errors before tickets are created.</p>
         <label class="file-upload-panel import-file-panel">
             <span class="file-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 12l5 5m0-5-5 5"/></svg></span>
-            <span class="file-upload-copy"><strong>Select an .xlsx workbook</strong><small>Excel workbook · Maximum file size 10 MB</small></span>
+            <span class="file-upload-copy"><strong>Select an .xlsx workbook</strong><small>Excel workbook · Maximum file size @(MaxFileSize / (1024 * 1024)) MB</small></span>
             <InputFile @key="_fileInputKey" OnChange="SelectFile" accept=".xlsx" class="import-file-input" />
         </label>
 
@@ -117,7 +117,7 @@
 </MudContainer>
 
 @code {
-    private const long MaxFileSize = 10 * 1024 * 1024;
+    private const long MaxFileSize = AppConstants.ExcelImportMaxFileSizeBytes;
 
     private IBrowserFile? _selectedFile;
     private TicketImportValidationResult? _validation;
@@ -151,7 +151,7 @@
         }
         catch (IOException)
         {
-            _errorMessage = "The Excel file could not be read. Make sure it is an .xlsx file and is smaller than 10 MB.";
+            _errorMessage = "The Excel file could not be read. Make sure it is an .xlsx file and is smaller than @(MaxFileSize / (1024 * 1024)) MB.";
         }
         catch (Exception ex)
         {
