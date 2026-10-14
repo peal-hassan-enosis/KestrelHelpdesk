@@ -70,6 +70,58 @@ public sealed class TicketService : ITicketService
         }
     }
 
+    public async Task<IReadOnlyList<TicketAttachment>> SaveTicketWithAttachmentsAsync(
+        Ticket ticket,
+        bool isCreate,
+        IReadOnlyList<TicketAttachment> attachmentsToAdd,
+        IReadOnlyCollection<int> attachmentIdsToDelete,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await RequireUserAsync();
+        var statusChanged = false;
+
+        if (isCreate)
+        {
+            ValidateTicket(ticket);
+            ticket.CreatedBy = user.UserId;
+            ticket.Status = TicketStatus.Open;
+            ticket.AssignedToUserId = null;
+            ticket.CreatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            var existing = await GetTicketByIdAsync(ticket.Id)
+                ?? throw new KeyNotFoundException($"Ticket {ticket.Id} was not found.");
+
+            if (!TicketAccessPolicy.CanEdit(user, existing))
+                throw new UnauthorizedAccessException("You are not allowed to edit this ticket.");
+
+            statusChanged = existing.Status != ticket.Status;
+            if (user.IsInRole(AppRoles.Manager))
+                ticket.Status = existing.Status;
+
+            ValidateTicket(ticket);
+            ticket.CreatedBy = existing.CreatedBy;
+            ticket.AssignedToUserId = existing.AssignedToUserId;
+            ticket.CreatedAt = existing.CreatedAt;
+        }
+
+        var removedAttachments = await _repository.SaveTicketWithAttachmentsAsync(
+            ticket,
+            isCreate,
+            attachmentsToAdd,
+            attachmentIdsToDelete,
+            cancellationToken);
+
+        if (!isCreate && user.IsInRole(AppRoles.Agent) && statusChanged)
+        {
+            await _ticketEvents.PublishTicketChangedAsync(
+                new TicketChangedEventArgs(ticket.Id, TicketChangeType.StatusChanged));
+        }
+
+        return removedAttachments;
+    }
+
     private async Task<CurrentUserInfo> RequireUserAsync() =>
         await _currentUser.GetCurrentUserAsync()
         ?? throw new UnauthorizedAccessException("You must be signed in.");
