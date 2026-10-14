@@ -18,7 +18,7 @@ public class TicketFormTests : BunitContext
     }
 
     [Fact]
-    public void InvalidForm_ShowsValidationMessages_AndDoesNotSubmit()
+    public void InvalidForm_ShowsDataAnnotationMessages_AndDoesNotSubmit()
     {
         ConfigureJsInterop();
         var submitted = false;
@@ -26,7 +26,6 @@ public class TicketFormTests : BunitContext
         {
             Title = string.Empty,
             Description = string.Empty,
-            Category = null,
             Priority = TicketPriority.Low,
             Status = TicketStatus.Open
         };
@@ -43,8 +42,60 @@ public class TicketFormTests : BunitContext
         var validationSummary = cut.Find("ul.alert-danger").TextContent;
         Assert.Contains("Title is required.", validationSummary);
         Assert.Contains("Description is required.", validationSummary);
-        Assert.Contains("Category is required.", validationSummary);
         Assert.False(submitted);
+    }
+
+    [Fact]
+    public void CreateForm_RequiresCategorySelection()
+    {
+        ConfigureJsInterop();
+        var submitted = false;
+        var model = new Ticket
+        {
+            Title = "Cannot sign in",
+            Description = "I cannot sign in to the application.",
+            Priority = TicketPriority.High,
+            Status = TicketStatus.Open
+        };
+
+        var cut = Render<TicketForm>(parameters => parameters
+            .Add(p => p.TicketModel, model)
+            .Add(p => p.IsCreateMode, true)
+            .Add(p => p.OnValidSubmit, EventCallback.Factory.Create<TicketFormSubmission>(
+                new object(),
+                _ => submitted = true)));
+
+        cut.Find("form").Submit();
+
+        Assert.Contains("Category is required.", cut.Find(".ticket-form").TextContent);
+        Assert.False(submitted);
+    }
+
+    [Fact]
+    public void CreateForm_UsesSelectedCategoryWhenSubmitting()
+    {
+        ConfigureJsInterop();
+        TicketFormSubmission? submitted = null;
+        var model = new Ticket
+        {
+            Title = "Cannot sign in",
+            Description = "I cannot sign in to the application.",
+            Priority = TicketPriority.High,
+            Status = TicketStatus.Open
+        };
+
+        var cut = Render<TicketForm>(parameters => parameters
+            .Add(p => p.TicketModel, model)
+            .Add(p => p.IsCreateMode, true)
+            .Add(p => p.OnValidSubmit, EventCallback.Factory.Create<TicketFormSubmission>(
+                new object(),
+                value => submitted = value)));
+
+        cut.Find("#ticket-category").Change(nameof(TicketCategory.Software));
+        cut.Find("form").Submit();
+
+        Assert.NotNull(submitted);
+        Assert.Equal(TicketCategory.Software, submitted!.Ticket.Category);
     }
 
     private void ConfigureJsInterop()
