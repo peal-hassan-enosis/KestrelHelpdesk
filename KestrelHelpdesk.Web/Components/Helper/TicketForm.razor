@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@inject ILogger<TicketForm> Logger
 @inject ITicketAttachmentService TicketAttachmentService
 @implements IAsyncDisposable
 @using System.ComponentModel.DataAnnotations
@@ -201,6 +202,11 @@
     catch (KeyNotFoundException)
     {
       attachmentError = "The ticket or one of its attachments no longer exists. Reload the page and try again.";
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Failed to validate attachments for ticket {TicketId}.", IsCreateMode ? null : TicketModel.Id);
+      attachmentError = "The attachments could not be validated. Please try again.";
     }
   }
 
