@@ -34,7 +34,7 @@ public sealed class TicketPdfService : ITicketPdfService
     // PAC checks URL and email-looking text even when there is no annotation. These values
     // are emitted as real, tagged links so both the visible text and destination are accessible.
     private static readonly Regex LinkableTextPattern = new(
-        @"(?<url>(?:https?://|www\\.)[^\\s<>]+)|(?<email>[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+)",
+        @"(?<url>(?:https?://|www\.)[^\s<>]+)|(?<email>[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public byte[] Generate(
