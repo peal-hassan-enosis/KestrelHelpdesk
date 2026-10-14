@@ -86,7 +86,7 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
                 resized.Height,
                 WasResized: true);
         }
-        catch (SKException ex)
+        catch (Exception ex) when (ex is not InvalidDataException)
         {
             throw new InvalidDataException("The image could not be processed. Upload a valid, non-animated image.", ex);
         }
@@ -107,7 +107,7 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
             EnsureSupportedStillImage(codec, extension);
             return codec;
         }
-        catch (SKException ex)
+        catch (Exception ex) when (ex is not InvalidDataException)
         {
             throw new InvalidDataException(
                 "The image could not be inspected. Upload a valid, non-animated PNG, JPG/JPEG, GIF, or WebP image.",
@@ -121,7 +121,7 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
         {
             return SKBitmap.Decode(bytes) ?? throw InvalidImage();
         }
-        catch (SKException ex)
+        catch (Exception ex) when (ex is not InvalidDataException)
         {
             throw new InvalidDataException(
                 "The image could not be decoded. Upload a valid, non-animated PNG, JPG/JPEG, GIF, or WebP image.",
