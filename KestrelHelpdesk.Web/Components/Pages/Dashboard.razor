@@ -7,7 +7,7 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
+@attribute [Authorize(Roles = AppRoles.EmployeeAgentManager)]
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
