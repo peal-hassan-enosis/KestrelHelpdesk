@@ -22,7 +22,7 @@
   <div class="row mb-3">
     <div class="col-md-6">
       <label for="ticket-category" class="form-label fw-bold">Category</label>
-      <InputSelect T="TicketCategory?" id="ticket-category" @bind-Value="selectedCategory" class="form-select @(categoryError is null ? "" : "is-invalid")">
+      <InputSelect T="TicketCategory?" id="ticket-category" Value="selectedCategory" ValueChanged="OnCategoryChanged" class="form-select @(categoryError is null ? "" : "is-invalid")">
         <option value="">-- Select Category --</option>
         @foreach (var cat in Enum.GetValues<TicketCategory>())
         {
@@ -147,6 +147,12 @@
     if (!firstRender) return;
     module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/ticket-form.js");
     await module.InvokeVoidAsync("focusElement", "ticket-title");
+  }
+
+  private void OnCategoryChanged(TicketCategory? value)
+  {
+    selectedCategory = value;
+    categoryError = null;
   }
 
   private void HandleFilesSelected(InputFileChangeEventArgs e)
