@@ -156,7 +156,6 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                     throw new UnauthorizedAccessException("You are not allowed to update this ticket.");
             }
 
-            var currentAttachments = existingTicket?.Attachments ?? [];
             var currentUser = await _currentUser.GetCurrentUserAsync();
             var userId = currentUser?.UserId;
             if (string.IsNullOrWhiteSpace(userId))
