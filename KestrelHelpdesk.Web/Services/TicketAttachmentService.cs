@@ -18,7 +18,7 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
     private readonly IImageAttachmentProcessor _imageProcessor;
     private readonly ILogger<TicketAttachmentService> _logger;
 
-    // The validated image output is reused by ApplyChangesAsync so that validation and
+    // The validated image output is reused by SaveTicketChangesAsync so that validation and
     // storage operate on the exact same processed bytes without resizing the image twice.
     private readonly Dictionary<IBrowserFile, ProcessedAttachmentImage> _processedImages =
         new(ReferenceEqualityComparer.Instance);
