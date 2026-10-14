@@ -79,7 +79,7 @@
       <span class="file-upload-copy">
         <strong>Select supporting files</strong>
         <small>PDF, images, Office files, CSV, text or ZIP · Up to @TicketAttachmentPolicy.MaxFilesPerTicket files, @FormatFileSize(TicketAttachmentPolicy.MaxFileSize) each</small>
-        <small class="file-upload-image-note">Images with a longest side over 1600 px are automatically resized proportionally. Animated images aren't supported.</small>
+        <small class="file-upload-image-note">Images with a longest side over @TicketAttachmentPolicy.MaxImageLongestSide px are automatically resized proportionally. Animated images aren't supported.</small>
       </span>
       <InputFile OnChange="HandleFilesSelected" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" />
     </label>
