@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using iText.IO.Font;
 using iText.Kernel.Colors;
 using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Action;
 using iText.Kernel.Pdf.Navigation;
 using iText.Kernel.Pdf.Tagging;
 using iText.Layout;
@@ -27,6 +29,13 @@ public sealed class TicketPdfService : ITicketPdfService
     private static readonly DeviceRgb BodyForeground = new(36, 48, 68);
     private static readonly DeviceRgb AlternateRowBackground = new(246, 249, 253);
     private static readonly DeviceRgb BorderColor = new(222, 229, 239);
+    private static readonly DeviceRgb LinkForeground = new(37, 88, 176);
+
+    // PAC checks URL and email-looking text even when there is no annotation. These values
+    // are emitted as real, tagged links so both the visible text and destination are accessible.
+    private static readonly Regex LinkableTextPattern = new(
+        @"(?<url>(?:https?://|www\\.)[^\\s<>]+)|(?<email>[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public byte[] Generate(
         IReadOnlyList<TicketPdfRow> rows,
@@ -156,11 +165,10 @@ public sealed class TicketPdfService : ITicketPdfService
         bool alternate,
         TextAlignment alignment = TextAlignment.LEFT)
     {
+        var paragraph = CreateAccessibleParagraph(value ?? string.Empty, regularFont, 9.5f);
+
         var cell = new Cell()
-            .Add(new Paragraph(value ?? string.Empty)
-                .SetFont(regularFont)
-                .SetFontSize(9.5f)
-                .SetFontColor(BodyForeground))
+            .Add(paragraph)
             .SetBorder(new SolidBorder(BorderColor, 0.5f))
             .SetPaddingTop(7)
             .SetPaddingBottom(7)
@@ -172,6 +180,61 @@ public sealed class TicketPdfService : ITicketPdfService
             cell.SetBackgroundColor(AlternateRowBackground);
 
         table.AddCell(cell);
+    }
+
+    private static Paragraph CreateAccessibleParagraph(string value, PdfFont font, float fontSize)
+    {
+        var paragraph = new Paragraph()
+            .SetFont(font)
+            .SetFontSize(fontSize)
+            .SetFontColor(BodyForeground);
+
+        var position = 0;
+        foreach (Match match in LinkableTextPattern.Matches(value))
+        {
+            var matchedText = match.Value;
+            var linkText = TrimLinkPunctuation(matchedText, out var trailingText);
+
+            if (linkText.Length == 0)
+                continue;
+
+            if (match.Index > position)
+                paragraph.Add(value[position..match.Index]);
+
+            var isEmail = match.Groups["email"].Success;
+            var target = isEmail
+                ? $"mailto:{linkText}"
+                : linkText.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+                    ? $"https://{linkText}"
+                    : linkText;
+
+            var link = new Link(linkText, PdfAction.CreateURI(target))
+                .SetFont(font)
+                .SetFontSize(fontSize)
+                .SetFontColor(LinkForeground);
+
+            // Explicitly assign the Link structure role; iText also associates the Link
+            // annotation with this element, making the link discoverable by screen readers.
+            link.GetAccessibilityProperties().SetRole(StandardRoles.LINK);
+            paragraph.Add(link);
+
+            if (trailingText.Length > 0)
+                paragraph.Add(trailingText);
+
+            position = match.Index + matchedText.Length;
+        }
+
+        if (position < value.Length)
+            paragraph.Add(value[position..]);
+
+        return paragraph;
+    }
+
+    private static string TrimLinkPunctuation(string candidate, out string trailingText)
+    {
+        var trimmed = candidate.TrimEnd('.', ',', ';', ':', '!', '?', ')', ']', '}', '"', '\'');
+        trailingText = candidate[trimmed.Length..];
+        return trimmed;
     }
 
     private static string NormalizeDocumentTitle(string? title) =>
