@@ -213,9 +213,14 @@ public sealed class TicketPdfService : ITicketPdfService
                 .SetFontSize(fontSize)
                 .SetFontColor(LinkForeground);
 
-            // Explicitly assign the Link structure role; iText also associates the Link
-            // annotation with this element, making the link discoverable by screen readers.
-            link.GetAccessibilityProperties().SetRole(StandardRoles.LINK);
+            // Give the link annotation an accessible alternate description. PDF/UA requires
+            // link annotations to have contents or an Alt entry on the enclosing structure element.
+            var accessibleDescription = isEmail
+                ? $"Email {linkText}"
+                : $"Open link {linkText}";
+            link.GetAccessibilityProperties()
+                .SetRole(StandardRoles.LINK)
+                .SetAlternateDescription(accessibleDescription);
             paragraph.Add(link);
 
             if (trailingText.Length > 0)
