@@ -2,7 +2,9 @@ import { Chart, registerables } from "https://cdn.jsdelivr.net/npm/chart.js@4.5.
 
 Chart.register(...registerables);
 
-let chart = null;
+// Key charts by their component-instance canvas ID. Blazor can remove and recreate
+// a route's DOM while the JavaScript module remains cached in the browser.
+const charts = new Map();
 
 const countLabelsPlugin = {
   id: "ticketCountLabels",
@@ -17,7 +19,9 @@ const countLabelsPlugin = {
 
     meta.data.forEach((bar, index) => {
       const value = dataset.data[index];
-      if (Number(value) > 0) ctx.fillText(String(value), bar.x, bar.y - 8);
+      if (Number(value) > 0) {
+        ctx.fillText(String(value), bar.x, bar.y - 8);
+      }
     });
 
     ctx.restore();
@@ -28,39 +32,31 @@ export function createStatusChart(canvasId, labels, values) {
   const canvas = document.getElementById(canvasId);
 
   if (!canvas) {
-    destroyChart();
+    destroyChart(canvasId);
     return;
   }
 
-  // Reuse the existing chart when the DOM canvas is still the same. Blazor can
-  // render the page again without replacing the canvas, so avoid rebuilding it
-  // unnecessarily while still recovering if navigation replaced the element.
-  if (chart && chart.canvas === canvas) {
-    const currentLabels = chart.data.labels ?? [];
-    const currentValues = chart.data.datasets?.[0]?.data ?? [];
-    const dataChanged =
-      labels.length !== currentLabels.length ||
-      labels.some((label, index) => label !== currentLabels[index]) ||
-      values.length !== currentValues.length ||
-      values.some((value, index) => value !== currentValues[index]);
+  const existingChart = charts.get(canvasId);
 
-    if (dataChanged) {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = values;
-      chart.update("none");
-    }
-
+  // Keep the same Chart.js instance while this component's canvas is still mounted.
+  if (existingChart && existingChart.canvas === canvas) {
+    existingChart.data.labels = labels;
+    existingChart.data.datasets[0].data = values;
+    existingChart.update("none");
     return;
   }
 
-  chart?.destroy();
-  chart = null;
+  // A route can be revisited and receive a new canvas even though this module is cached.
+  if (existingChart) {
+    existingChart.destroy();
+    charts.delete(canvasId);
+  }
 
-  // Also clean up any Chart.js instance left on this canvas by a previous
-  // component/module instance.
+  // Clean up an orphan registered against this exact canvas, without touching charts
+  // created by other component instances.
   Chart.getChart(canvas)?.destroy();
 
-  chart = new Chart(canvas, {
+  const instance = new Chart(canvas, {
     type: "bar",
     plugins: [countLabelsPlugin],
     data: {
@@ -117,15 +113,20 @@ export function createStatusChart(canvasId, labels, values) {
       }
     }
   });
+
+  charts.set(canvasId, instance);
 }
 
-export function destroyChart() {
-  if (chart) {
-    chart.destroy();
-    chart = null;
+export function destroyChart(canvasId) {
+  const instance = charts.get(canvasId);
+  if (instance) {
+    instance.destroy();
+    charts.delete(canvasId);
   }
 
-  const canvas = document.getElementById("ticketStatusChart");
-  const existingChart = canvas ? Chart.getChart(canvas) : undefined;
-  existingChart?.destroy();
+  // Fallback for a chart registered before the module map was initialized.
+  const canvas = document.getElementById(canvasId);
+  if (canvas) {
+    Chart.getChart(canvas)?.destroy();
+  }
 }
