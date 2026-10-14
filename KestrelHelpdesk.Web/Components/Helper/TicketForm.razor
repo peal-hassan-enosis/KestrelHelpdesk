@@ -155,7 +155,7 @@
     if (oversized is not null)
     {
       selectedFiles.Clear();
-      attachmentError = $"{oversized.Name} exceeds the 10 MB file size limit.";
+      attachmentError = $"{oversized.Name} exceeds the {TicketAttachmentPolicy.MaxFileSize / (1024 * 1024)} MB file size limit.";
     }
   }
 
