@@ -68,7 +68,7 @@
 <MudGrid Class="mb-4">
   <MudItem xs="12" md="6">
     <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
-    <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts 300 ms after you stop typing.</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppConstants.SearchDebounceMilliseconds ms after you stop typing.</MudText>
   </MudItem>
   <MudItem xs="12" md="4">
     <MudSelect T="string" Value="@StatusQuery" ValueChanged="OnStatusChanged" Label="Status" Variant="Variant.Outlined">
@@ -103,7 +103,7 @@
       </PropertyColumn>
       <TemplateColumn Title="Assignment" Sortable="false">
         <CellTemplate Context="cell">
-          <AuthorizeView Roles="Manager">
+          <AuthorizeView Roles="@AppRoles.Manager">
             <select class="form-select form-select-sm" value="@cell.Item.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(cell.Item.Id, e)">
               <option value="">Unassigned</option>
               @if (!string.IsNullOrWhiteSpace(cell.Item.AssignedToUserId) && agents.All(agent => agent.Id != cell.Item.AssignedToUserId))
@@ -119,7 +119,7 @@
               }
             </select>
           </AuthorizeView>
-          <AuthorizeView Roles="Agent">
+          <AuthorizeView Roles="@AppRoles.Agent">
             @if (activeScope == TicketScope.AgentCreated)
             {
               @if (cell.Item.AssignedToUserId == currentUserId)
