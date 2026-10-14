@@ -19,11 +19,11 @@
       <AuthorizeView Roles="Employee, Agent, Manager">
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting" OnClick="ExportCurrentPageAsync">
           <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="me-1" />
-          @(exporting ? "Exporting..." : "Export page")
+          @(exportingCurrentPage ? "Exporting..." : "Export page")
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting" OnClick="ExportAllTicketsAsync">
           <MudIcon Icon="@Icons.Material.Filled.Download" Class="me-1" />
-          Export all
+          @(exportingAllTickets ? "Exporting..." : "Export all")
         </MudButton>
         <MudButton Href="/tickets/new" Variant="Variant.Filled" Color="Color.Primary">Create ticket</MudButton>
       </AuthorizeView>
