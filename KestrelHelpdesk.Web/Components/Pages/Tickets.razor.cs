@@ -21,6 +21,8 @@ public partial class Tickets : IAsyncDisposable
     [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
     [Inject] private BrowserTimeZoneService BrowserTimeZone { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ILogger<Tickets> Logger { get; set; } = default!;
 
     [SupplyParameterFromQuery(Name = "status")]
     public string? StatusQuery { get; set; }
@@ -33,6 +35,8 @@ public partial class Tickets : IAsyncDisposable
     private bool isManager;
     private bool notAssignedOnly;
     private bool exporting;
+    private string? exportErrorMessage;
+    private string? exportSuccessMessage;
     private string? currentUserId;
     private string searchText = string.Empty;
     private string searchTerm = string.Empty;
@@ -80,11 +84,39 @@ public partial class Tickets : IAsyncDisposable
         return new GridData<Ticket> { Items = items, TotalItems = totalCount };
     }
 
-    private async Task ExportCurrentPageAsync() => await ExportTicketsAsync(currentPageTickets, "Current Page");
+    private async Task ExportCurrentPageAsync()
+    {
+        if (exporting)
+            return;
+
+        exportErrorMessage = null;
+        exportSuccessMessage = null;
+        exporting = true;
+
+        try
+        {
+            await GenerateAndDownloadPdfAsync(currentPageTickets, "Current Page");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to export the current ticket page as PDF.");
+            exportErrorMessage = "The PDF could not be exported. Please try again. If the issue continues, check the application logs.";
+        }
+        finally
+        {
+            exporting = false;
+        }
+    }
 
     private async Task ExportAllTicketsAsync()
     {
+        if (exporting)
+            return;
+
+        exportErrorMessage = null;
+        exportSuccessMessage = null;
         exporting = true;
+
         try
         {
             var tickets = await TicketQueryService.GetTicketsForExportAsync(
@@ -95,7 +127,12 @@ public partial class Tickets : IAsyncDisposable
                 currentSortBy,
                 currentSortDescending);
 
-            await ExportTicketsAsync(tickets, "All Tickets");
+            await GenerateAndDownloadPdfAsync(tickets, "All Tickets");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to export all tickets as PDF.");
+            exportErrorMessage = "The PDF could not be exported. Please try again. If the issue continues, check the application logs.";
         }
         finally
         {
@@ -103,33 +140,34 @@ public partial class Tickets : IAsyncDisposable
         }
     }
 
-    private async Task ExportTicketsAsync(IReadOnlyList<Ticket> tickets, string scopeLabel)
+    private async Task GenerateAndDownloadPdfAsync(IReadOnlyList<Ticket> tickets, string scopeLabel)
     {
-        if (tickets.Count == 0) return;
-
-        exporting = true;
-        try
+        if (tickets.Count == 0)
         {
-            var rows = tickets.Select(ticket => new TicketPdfRow(
-                ticket.Id,
-                ticket.Title,
-                GetStatusLabel(ticket.Status),
-                ticket.Priority.ToString(),
-                GetAssigneeName(ticket.AssignedToUserId),
-                BrowserTimeZone.IsInitialized
-                    ? BrowserTimeZone.Format(ticket.CreatedAt)
-                    : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))).ToList();
+            exportErrorMessage = scopeLabel == "Current Page"
+                ? "There are no tickets on the current page to export."
+                : "There are no tickets in the current view to export.";
+            return;
+        }
 
-            var pdfBytes = TicketPdfService.Generate(rows, $"Ticket Board - {scopeLabel}");
-            pdfModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/pdf-export.js");
-            var base64 = Convert.ToBase64String(pdfBytes);
-            var fileName = $"tickets-{(scopeLabel == "Current Page" ? "current-page" : "all")}-{DateTime.Now:yyyyMMdd-HHmmss}.pdf";
-            await pdfModule.InvokeVoidAsync("downloadPdf", fileName, base64);
-        }
-        finally
-        {
-            exporting = false;
-        }
+        var rows = tickets.Select(ticket => new TicketPdfRow(
+            ticket.Id,
+            ticket.Title,
+            GetStatusLabel(ticket.Status),
+            ticket.Priority.ToString(),
+            GetAssigneeName(ticket.AssignedToUserId),
+            BrowserTimeZone.IsInitialized
+                ? BrowserTimeZone.Format(ticket.CreatedAt)
+                : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))).ToList();
+
+        var pdfBytes = TicketPdfService.Generate(rows, $"Ticket Board - {scopeLabel}");
+        var moduleUrl = new Uri(new Uri(NavigationManager.BaseUri), "js/pdf-export.js").ToString();
+        pdfModule ??= await JS.InvokeAsync<IJSObjectReference>("import", moduleUrl);
+
+        var base64 = Convert.ToBase64String(pdfBytes);
+        var fileName = $"tickets-{(scopeLabel == "Current Page" ? "current-page" : "all")}-{DateTime.Now:yyyyMMdd-HHmmss}.pdf";
+        await pdfModule.InvokeVoidAsync("downloadPdf", fileName, base64);
+        exportSuccessMessage = $"PDF export started for {tickets.Count} ticket(s).";
     }
 
     private async Task OnTicketChangedAsync(TicketChangedEventArgs eventArgs) => await InvokeAsync(RefreshGrid);
