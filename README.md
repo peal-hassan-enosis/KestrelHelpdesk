@@ -103,11 +103,14 @@ VPN access request | Unable to connect to the company VPN. | High | Network | ag
 
 The Assigned To column is optional. Use the category and priority names listed above. Do not add Status or CreatedBy columns.
 
-### PDF export
+### PDF export and accessibility
 
 - Export the tickets on the current board page or all tickets in the current permitted view.
 - Exports use the active ticket scope, filters, and sort order.
-- PDF generation is handled by the PDF service, while a JavaScript module triggers the browser download.
+- The PDF service targets **PDF/UA-1** using tagged document structure, a document language, a descriptive document title, title-display preferences, metadata, semantic table headers, and embedded fonts.
+- PDF fonts are resolved from Windows system fonts or Linux DejaVu/Liberation font paths. The Docker runtime installs `fonts-dejavu-core` for predictable font availability.
+- PDF generation remains in `TicketPdfService`; the existing JavaScript module is responsible only for triggering the browser download.
+- A code build is not proof of PDF/UA compliance. Re-export both the current page and all tickets, then validate each generated PDF with PAC using **PDF/UA-1**. Review the tag tree and logical reading order as well as automated checks.
 
 ### Identity and role onboarding
 
@@ -224,7 +227,7 @@ flowchart TD
 - **Core services:** Ticket CRUD/access checks, query/paging, assignment, comments, and import validation.
 - **Infrastructure services:** SQL repositories, Identity seeding and role management, and file storage.
 - **Excel:** NPOI reads and validates .xlsx workbooks.
-- **PDF:** iText generates export documents.
+- **PDF:** iText and the iText PDF/UA add-on generate tagged PDF/UA-1 ticket exports, with embedded fonts and document metadata.
 - **Charts:** Chart.js renders dashboard status charts in the browser.
 - **Browser helpers:** JavaScript modules support chart rendering, PDF downloads, title-field focus, clipboard actions, and local-time formatting.
 - **Health checks:** /health includes a database context check.
