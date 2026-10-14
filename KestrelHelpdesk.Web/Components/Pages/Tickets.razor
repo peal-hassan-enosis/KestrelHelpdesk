@@ -32,13 +32,13 @@
 
   @if (!string.IsNullOrWhiteSpace(exportErrorMessage))
   {
-    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4" CloseIcon="true" OnClose="@(() => exportErrorMessage = null)">
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4" ShowCloseIcon="true" CloseIcon="@Icons.Material.Filled.Close" OnClose="@(() => exportErrorMessage = null)">
       @exportErrorMessage
     </MudAlert>
   }
   @if (!string.IsNullOrWhiteSpace(exportSuccessMessage))
   {
-    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-4" CloseIcon="true" OnClose="@(() => exportSuccessMessage = null)">
+    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-4" ShowCloseIcon="true" CloseIcon="@Icons.Material.Filled.Close" OnClose="@(() => exportSuccessMessage = null)">
       @exportSuccessMessage
     </MudAlert>
   }
