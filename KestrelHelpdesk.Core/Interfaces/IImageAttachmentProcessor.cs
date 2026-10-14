@@ -5,18 +5,9 @@ namespace KestrelHelpdesk.Core.Interfaces;
 public interface IImageAttachmentProcessor
 {
     /// <summary>
-    /// Validates a still image before a ticket is created or updated.
-    /// Animated images are not supported.
-    /// </summary>
-    Task ValidateAsync(
-        Stream source,
-        string extension,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Produces the one image payload to store. Returns null for non-image attachments.
-    /// Images are never enlarged; images above the configured longest-side limit are
-    /// proportionally resized.
+    /// Validates and produces the single image payload to store. Returns null for
+    /// non-image attachments. Images are never enlarged; those exceeding the longest
+    /// side limit are proportionally resized.
     /// </summary>
     Task<ProcessedAttachmentImage?> ProcessAsync(
         Stream source,
