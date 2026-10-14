@@ -131,7 +131,8 @@ public sealed class TicketPdfService : ITicketPdfService
             .SetPaddingRight(7)
             .SetTextAlignment(TextAlignment.LEFT);
 
-        // AddHeaderCell creates header cells rather than ordinary table data cells.
+        // Preserve semantic header information for screen readers and table navigation.
+        header.GetAccessibilityProperties().SetRole(StandardRoles.TH);
         table.AddHeaderCell(header);
     }
 
