@@ -24,8 +24,7 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
 
         var bytes = await ReadSourceAsync(source, cancellationToken);
         using var metadataStream = new MemoryStream(bytes, writable: false);
-        using var codec = SKCodec.Create(metadataStream) ?? throw InvalidImage();
-        EnsureSupportedStillImage(codec, extension);
+        using var codec = CreateValidatedCodec(metadataStream, extension);
 
         var info = codec.Info;
         var origin = codec.EncodedOrigin;
@@ -98,6 +97,22 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
         await using var buffer = new MemoryStream();
         await source.CopyToAsync(buffer, cancellationToken);
         return buffer.ToArray();
+    }
+
+    private static SKCodec CreateValidatedCodec(Stream source, string extension)
+    {
+        try
+        {
+            var codec = SKCodec.Create(source) ?? throw InvalidImage();
+            EnsureSupportedStillImage(codec, extension);
+            return codec;
+        }
+        catch (SKException ex)
+        {
+            throw new InvalidDataException(
+                "The image could not be inspected. Upload a valid, non-animated PNG, JPG/JPEG, GIF, or WebP image.",
+                ex);
+        }
     }
 
     private static SKBitmap DecodeBitmap(byte[] bytes)
