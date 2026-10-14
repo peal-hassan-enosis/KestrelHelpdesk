@@ -1,7 +1,8 @@
+using System.Net.Mail;
 using iText.IO.Font.Constants;
-using iText.Kernel.Font;
-using iText.Kernel.Geom;
+using iText.Kernel.Colors;
 using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Action;
 using iText.Layout;
 using iText.Layout.Element;
 using iText.Layout.Properties;
@@ -20,8 +21,13 @@ public sealed class TicketPdfService : ITicketPdfService
         using var memoryStream = new MemoryStream();
         using var writer = new PdfWriter(memoryStream);
         using var pdf = new PdfDocument(writer);
-        using var document = new Document(pdf, PageSize.A4.Rotate());
 
+        // Generate a tagged PDF so assistive technology can interpret the table,
+        // paragraphs and any email/URL links as semantic document elements.
+        pdf.SetTagged();
+        pdf.GetCatalog().SetLang(new PdfString("en-US"));
+
+        using var document = new Document(pdf, PageSize.A4.Rotate());
         var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
 
         document.SetMargins(20, 20, 20, 20);
@@ -56,8 +62,13 @@ public sealed class TicketPdfService : ITicketPdfService
         }
 
         document.Add(table);
-        document.Close();
 
+        pdf.GetDocumentInfo()
+            .SetTitle(string.IsNullOrWhiteSpace(title) ? "Ticket export" : title)
+            .SetAuthor("Kestrel Helpdesk")
+            .SetSubject("Ticket export");
+
+        document.Close();
         return memoryStream.ToArray();
     }
 
@@ -70,7 +81,30 @@ public sealed class TicketPdfService : ITicketPdfService
 
     private static void AddCell(Table table, string? value)
     {
-        table.AddCell(new Cell()
-            .Add(new Paragraph(value ?? string.Empty).SetFontSize(8)));
+        var text = value ?? string.Empty;
+        var paragraph = new Paragraph().SetFontSize(8);
+
+        // PAC identifies email addresses and URLs as linkable text. Tag those
+        // strings as real Link elements instead of leaving them as unstructured text.
+        if (MailAddress.TryCreate(text, out var emailAddress)
+            && string.Equals(emailAddress.Address, text, StringComparison.OrdinalIgnoreCase))
+        {
+            paragraph.Add(new Link(text, PdfAction.CreateURI($"mailto:{text}"))
+                .SetFontColor(ColorConstants.BLUE)
+                .SetUnderline());
+        }
+        else if (Uri.TryCreate(text, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            paragraph.Add(new Link(text, PdfAction.CreateURI(uri.AbsoluteUri))
+                .SetFontColor(ColorConstants.BLUE)
+                .SetUnderline());
+        }
+        else
+        {
+            paragraph.Add(text);
+        }
+
+        table.AddCell(new Cell().Add(paragraph));
     }
 }
