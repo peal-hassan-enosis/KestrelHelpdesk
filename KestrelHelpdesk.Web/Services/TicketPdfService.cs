@@ -218,6 +218,10 @@ public sealed class TicketPdfService : ITicketPdfService
             var accessibleDescription = isEmail
                 ? $"Email {linkText}"
                 : $"Open link {linkText}";
+            // PDF/UA requires the PDF Link annotation dictionary itself to contain
+            // a /Contents description. The structure element's /Alt value alone does
+            // not satisfy this requirement, so set both properties explicitly.
+            link.GetLinkAnnotation().SetContents(accessibleDescription);
             link.GetAccessibilityProperties()
                 .SetRole(StandardRoles.LINK)
                 .SetAlternateDescription(accessibleDescription);
