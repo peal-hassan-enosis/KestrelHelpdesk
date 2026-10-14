@@ -4,6 +4,7 @@ using iText.Kernel.Colors;
 using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Navigation;
 using iText.Kernel.Pdf.Tagging;
 using iText.Layout;
 using iText.Layout.Borders;
@@ -104,6 +105,12 @@ public sealed class TicketPdfService : ITicketPdfService
             }
 
             document.Add(table);
+
+            // Preserve navigable document structure for PDF accessibility tools and readers.
+            pdf.InitializeOutlines();
+            var outlineRoot = pdf.GetOutlines(false);
+            var reportBookmark = outlineRoot.AddOutline(documentTitle);
+            reportBookmark.AddDestination(PdfExplicitDestination.CreateFit(pdf.GetFirstPage()));
         }
 
         return memoryStream.ToArray();
