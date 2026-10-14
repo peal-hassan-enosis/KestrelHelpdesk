@@ -15,6 +15,12 @@ RUN dotnet publish "KestrelHelpdesk.Web.csproj" -c Release -o /app/publish /p:Us
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
+# PDF/UA exports must embed a real font program. Keep the same font family available
+# in the Linux container as on Windows development machines.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=build /app/publish .
 
