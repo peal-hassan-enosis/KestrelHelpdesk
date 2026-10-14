@@ -137,7 +137,7 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
         if (codec.Info.Width <= 0 || codec.Info.Height <= 0)
             throw InvalidImage();
 
-        if (codec.FrameCount > 0)
+        if (codec.FrameCount > 1)
             throw new InvalidDataException("Animated images are not supported. Please upload a still image instead.");
 
         _ = GetFormat(codec.EncodedFormat, extension);
