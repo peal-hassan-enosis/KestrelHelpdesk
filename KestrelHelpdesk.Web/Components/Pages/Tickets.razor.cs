@@ -23,6 +23,7 @@ public partial class Tickets : IAsyncDisposable
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ILogger<Tickets> Logger { get; set; } = default!;
+    [Inject] private IWebHostEnvironment Environment { get; set; } = default!;
 
     [SupplyParameterFromQuery(Name = "status")]
     public string? StatusQuery { get; set; }
@@ -35,6 +36,8 @@ public partial class Tickets : IAsyncDisposable
     private bool isManager;
     private bool notAssignedOnly;
     private bool exporting;
+    private bool exportingCurrentPage;
+    private bool exportingAllTickets;
     private string? exportErrorMessage;
     private string? exportSuccessMessage;
     private string? currentUserId;
@@ -92,6 +95,7 @@ public partial class Tickets : IAsyncDisposable
         exportErrorMessage = null;
         exportSuccessMessage = null;
         exporting = true;
+        exportingCurrentPage = true;
 
         try
         {
@@ -100,11 +104,12 @@ public partial class Tickets : IAsyncDisposable
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to export the current ticket page as PDF.");
-            exportErrorMessage = "The PDF could not be exported. Please try again. If the issue continues, check the application logs.";
+            exportErrorMessage = GetExportErrorMessage(ex);
         }
         finally
         {
             exporting = false;
+            exportingCurrentPage = false;
         }
     }
 
@@ -116,6 +121,7 @@ public partial class Tickets : IAsyncDisposable
         exportErrorMessage = null;
         exportSuccessMessage = null;
         exporting = true;
+        exportingAllTickets = true;
 
         try
         {
@@ -132,13 +138,18 @@ public partial class Tickets : IAsyncDisposable
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to export all tickets as PDF.");
-            exportErrorMessage = "The PDF could not be exported. Please try again. If the issue continues, check the application logs.";
+            exportErrorMessage = GetExportErrorMessage(ex);
         }
         finally
         {
             exporting = false;
+            exportingAllTickets = false;
         }
     }
+
+    private string GetExportErrorMessage(Exception exception) => Environment.IsDevelopment()
+        ? $"PDF export failed: {exception.GetBaseException().Message}"
+        : "The PDF could not be exported. Please try again. If the issue continues, check the application logs.";
 
     private async Task GenerateAndDownloadPdfAsync(IReadOnlyList<Ticket> tickets, string scopeLabel)
     {
