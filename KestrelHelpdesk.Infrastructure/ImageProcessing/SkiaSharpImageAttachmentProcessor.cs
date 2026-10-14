@@ -1,0 +1,225 @@
+using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Interfaces;
+using KestrelHelpdesk.Core.Models;
+using SkiaSharp;
+
+namespace KestrelHelpdesk.Infrastructure.ImageProcessing;
+
+/// <summary>
+/// Validates and proportionally resizes supported still images before they are stored.
+/// The original upload is never written to disk alongside the processed output.
+/// </summary>
+public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcessor
+{
+    private const int JpegQuality = 88;
+    private const int WebpQuality = 88;
+
+    public async Task ValidateAsync(
+        Stream source,
+        string extension,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TicketAttachmentPolicy.IsImageExtension(extension))
+            return;
+
+        var bytes = await ReadSourceAsync(source, cancellationToken);
+        using var codec = CreateCodec(bytes);
+        EnsureSupportedStillImage(codec, extension);
+
+        using var bitmap = SKBitmap.Decode(codec);
+        if (bitmap is null || bitmap.Width <= 0 || bitmap.Height <= 0)
+            throw InvalidImage();
+    }
+
+    public async Task<ProcessedAttachmentImage?> ProcessAsync(
+        Stream source,
+        string extension,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TicketAttachmentPolicy.IsImageExtension(extension))
+            return null;
+
+        var bytes = await ReadSourceAsync(source, cancellationToken);
+        using var codec = CreateCodec(bytes);
+        EnsureSupportedStillImage(codec, extension);
+
+        var info = codec.Info;
+        var origin = codec.EncodedOrigin;
+        var swapDimensions = SwapsDimensions(origin);
+        var displayWidth = swapDimensions ? info.Height : info.Width;
+        var displayHeight = swapDimensions ? info.Width : info.Height;
+
+        if (displayWidth <= 0 || displayHeight <= 0)
+            throw InvalidImage();
+
+        var sourceFormat = GetFormat(codec.EncodedFormat, extension);
+
+        // Small, valid images are stored byte-for-byte as the single stored output.
+        // Their metadata is still derived from the detected file format and dimensions.
+        var longestSide = Math.Max(displayWidth, displayHeight);
+        if (longestSide <= TicketAttachmentPolicy.MaxImageLongestSide)
+        {
+            return new ProcessedAttachmentImage(
+                bytes,
+                sourceFormat.Extension,
+                sourceFormat.ContentType,
+                displayWidth,
+                displayHeight,
+                WasResized: false);
+        }
+
+        try
+        {
+            using var decoded = SKBitmap.Decode(codec);
+            if (decoded is null)
+                throw InvalidImage();
+
+            using var oriented = ApplyOrientation(decoded, origin);
+            var scale = TicketAttachmentPolicy.MaxImageLongestSide /
+                        (double)Math.Max(oriented.Width, oriented.Height);
+            var targetWidth = Math.Max(1, (int)Math.Round(oriented.Width * scale));
+            var targetHeight = Math.Max(1, (int)Math.Round(oriented.Height * scale));
+
+            using var resized = oriented.Resize(
+                new SKImageInfo(targetWidth, targetHeight),
+                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+
+            if (resized is null)
+                throw new InvalidDataException("The image could not be resized. Try saving it as a new image and uploading it again.");
+
+            // SkiaSharp does not encode GIF animation. A static GIF that needs resizing
+            // becomes a static PNG, with a matching filename extension and content type.
+            var outputFormat = codec.EncodedFormat == SKEncodedImageFormat.Gif
+                ? SKEncodedImageFormat.Png
+                : codec.EncodedFormat;
+
+            var output = GetOutputFormat(outputFormat, sourceFormat.Extension);
+            using var encoded = resized.Encode(outputFormat, GetQuality(outputFormat));
+            if (encoded is null)
+                throw new InvalidDataException("The processed image could not be encoded. Try uploading a PNG, JPG, or WebP image.");
+
+            return new ProcessedAttachmentImage(
+                encoded.ToArray(),
+                output.Extension,
+                output.ContentType,
+                resized.Width,
+                resized.Height,
+                WasResized: true);
+        }
+        catch (SKException ex)
+        {
+            throw new InvalidDataException("The image could not be processed. Upload a valid, non-animated image.", ex);
+        }
+    }
+
+    private static async Task<byte[]> ReadSourceAsync(Stream source, CancellationToken cancellationToken)
+    {
+        await using var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer, cancellationToken);
+        return buffer.ToArray();
+    }
+
+    private static SKCodec CreateCodec(byte[] bytes)
+    {
+        var stream = new MemoryStream(bytes, writable: false);
+        var codec = SKCodec.Create(stream);
+        if (codec is null)
+        {
+            stream.Dispose();
+            throw InvalidImage();
+        }
+
+        return codec;
+    }
+
+    private static void EnsureSupportedStillImage(SKCodec codec, string extension)
+    {
+        if (!TicketAttachmentPolicy.IsImageExtension(extension))
+            throw InvalidImage();
+
+        if (codec.Info.Width <= 0 || codec.Info.Height <= 0)
+            throw InvalidImage();
+
+        if (codec.FrameCount > 0)
+            throw new InvalidDataException("Animated images are not supported. Please upload a still image instead.");
+
+        _ = GetFormat(codec.EncodedFormat, extension);
+    }
+
+    private static (string Extension, string ContentType) GetFormat(
+        SKEncodedImageFormat format,
+        string requestedExtension) =>
+        format switch
+        {
+            SKEncodedImageFormat.Jpeg => (
+                requestedExtension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpeg" : ".jpg",
+                "image/jpeg"),
+            SKEncodedImageFormat.Png => (".png", "image/png"),
+            SKEncodedImageFormat.Webp => (".webp", "image/webp"),
+            SKEncodedImageFormat.Gif => (".gif", "image/gif"),
+            _ => throw new InvalidDataException("Supported image formats are PNG, JPG/JPEG, GIF, and WebP.")
+        };
+
+    private static (string Extension, string ContentType) GetOutputFormat(
+        SKEncodedImageFormat format,
+        string fallbackExtension) =>
+        format switch
+        {
+            SKEncodedImageFormat.Jpeg => (
+                fallbackExtension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpeg" : ".jpg",
+                "image/jpeg"),
+            SKEncodedImageFormat.Png => (".png", "image/png"),
+            SKEncodedImageFormat.Webp => (".webp", "image/webp"),
+            _ => throw new InvalidDataException("The processed image format is not supported.")
+        };
+
+    private static int GetQuality(SKEncodedImageFormat format) => format switch
+    {
+        SKEncodedImageFormat.Jpeg => JpegQuality,
+        SKEncodedImageFormat.Webp => WebpQuality,
+        _ => 100
+    };
+
+    private static bool SwapsDimensions(SKEncodedOrigin origin) =>
+        origin is SKEncodedOrigin.LeftTop
+            or SKEncodedOrigin.RightTop
+            or SKEncodedOrigin.RightBottom
+            or SKEncodedOrigin.LeftBottom;
+
+    private static SKBitmap ApplyOrientation(SKBitmap source, SKEncodedOrigin origin)
+    {
+        var swapDimensions = SwapsDimensions(origin);
+        var targetWidth = swapDimensions ? source.Height : source.Width;
+        var targetHeight = swapDimensions ? source.Width : source.Height;
+        var result = new SKBitmap(
+            new SKImageInfo(targetWidth, targetHeight, SKColorType.Rgba8888, SKAlphaType.Premul));
+
+        var width = source.Width;
+        var height = source.Height;
+        var matrix = origin switch
+        {
+            SKEncodedOrigin.TopLeft => new SKMatrix(1, 0, 0, 0, 1, 0, 0, 0, 1),
+            SKEncodedOrigin.TopRight => new SKMatrix(-1, 0, width, 0, 1, 0, 0, 0, 1),
+            SKEncodedOrigin.BottomRight => new SKMatrix(-1, 0, width, 0, -1, height, 0, 0, 1),
+            SKEncodedOrigin.BottomLeft => new SKMatrix(1, 0, 0, 0, -1, height, 0, 0, 1),
+            SKEncodedOrigin.LeftTop => new SKMatrix(0, 1, 0, 1, 0, 0, 0, 0, 1),
+            SKEncodedOrigin.RightTop => new SKMatrix(0, -1, height, 1, 0, 0, 0, 0, 1),
+            SKEncodedOrigin.RightBottom => new SKMatrix(0, -1, height, -1, 0, width, 0, 0, 1),
+            SKEncodedOrigin.LeftBottom => new SKMatrix(0, 1, 0, -1, 0, width, 0, 0, 1),
+            _ => SKMatrix.Identity
+        };
+
+        using (var canvas = new SKCanvas(result))
+        {
+            canvas.Clear(SKColors.Transparent);
+            canvas.SetMatrix(matrix);
+            canvas.DrawBitmap(source, 0, 0);
+            canvas.Flush();
+        }
+
+        return result;
+    }
+
+    private static InvalidDataException InvalidImage() =>
+        new("This file is not a valid supported image. Upload a PNG, JPG/JPEG, GIF, or WebP image.");
+}
