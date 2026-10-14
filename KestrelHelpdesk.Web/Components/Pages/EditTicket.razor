@@ -4,8 +4,10 @@
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
 @inject ITicketService TicketService
 @inject ITicketAttachmentService TicketAttachmentService
+@inject ILogger<EditTicket> Logger
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
@@ -42,10 +44,15 @@ else
     <div class="page-actions"><a href="/tickets/@ticketToEdit.Id" class="btn btn-outline-secondary">Cancel</a></div>
   </header>
 
+  @if (!string.IsNullOrWhiteSpace(errorMessage))
+  {
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@errorMessage</MudAlert>
+  }
+
   <div class="surface-card form-surface">
     <TicketForm TicketModel="ticketToEdit"
                 CanEditStatus="canEditStatus"
-                SubmitButtonText="Save changes"
+                SubmitButtonText="@(isSaving ? "Saving..." : "Save changes")"
                 OnValidSubmit="UpdateTicket" />
   </div>
 }
@@ -57,6 +64,8 @@ else
   private Ticket? ticketToEdit;
   private bool notFound;
   private bool canEditStatus = true;
+  private bool isSaving;
+  private string? errorMessage;
 
   protected override async Task OnInitializedAsync()
   {
@@ -92,12 +101,42 @@ else
 
   private async Task UpdateTicket(TicketFormSubmission submission)
   {
-    await TicketService.UpdateTicketAsync(submission.Ticket);
-    await TicketAttachmentService.ApplyChangesAsync(
-        submission.Ticket.Id,
-        submission.NewFiles,
-        submission.AttachmentIdsToDelete);
+    if (isSaving)
+      return;
 
-    Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+    isSaving = true;
+    errorMessage = null;
+
+    try
+    {
+      await TicketAttachmentService.SaveTicketChangesAsync(
+          submission.Ticket,
+          isCreateMode: false,
+          submission.NewFiles,
+          submission.AttachmentIdsToDelete);
+
+      Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+    }
+    catch (ValidationException ex)
+    {
+      errorMessage = ex.Message;
+    }
+    catch (UnauthorizedAccessException)
+    {
+      errorMessage = "You are not allowed to update this ticket.";
+    }
+    catch (KeyNotFoundException)
+    {
+      errorMessage = "This ticket or one of its attachments no longer exists. Reload the page and try again.";
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Failed to save ticket {TicketId} with its attachments.", submission.Ticket.Id);
+      errorMessage = "The ticket could not be saved. No ticket or attachment changes were applied. Please try again.";
+    }
+    finally
+    {
+      isSaving = false;
+    }
   }
 }
