@@ -17,7 +17,7 @@ public class Ticket
     [Required(ErrorMessage = "Description is required.")]
     public string Description { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Priority is required.")]
+    // Priority is non-nullable, so the form always submits an explicit enum value.
     public TicketPriority Priority { get; set; }
 
     // Nullable so the form can represent its unselected placeholder; [Required] rejects it on submit.
