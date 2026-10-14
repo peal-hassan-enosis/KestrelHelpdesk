@@ -90,7 +90,7 @@
         @if (TotalTicketCount > 0)
         {
             <div class="chart-canvas-wrap">
-                <canvas id="ticketStatusChart" aria-label="Bar chart showing ticket counts by status" role="img"></canvas>
+                <canvas id="@chartCanvasId" aria-label="Bar chart showing ticket counts by status" role="img"></canvas>
             </div>
         }
         else
@@ -107,6 +107,8 @@
 
 @code {
     private IJSObjectReference? module;
+    // Each component instance owns a unique canvas ID so a delayed cleanup from an old route instance cannot destroy a newly rendered chart.
+    private readonly string chartCanvasId = $"ticketStatusChart-{Guid.NewGuid():N}";
     private Dictionary<TicketStatus, int> statusCounts = new();
     private bool isAgent;
     private bool isManager;
@@ -148,7 +150,7 @@
         {
             await module.InvokeVoidAsync(
                 "createStatusChart",
-                "ticketStatusChart",
+                chartCanvasId,
                 new[] { "Open", "In Progress", "Resolved" },
                 new[] { GetCount(TicketStatus.Open), GetCount(TicketStatus.InProgress), GetCount(TicketStatus.Resolved) });
         }
