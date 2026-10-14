@@ -121,6 +121,73 @@ public class TicketRepository : ITicketRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task<IReadOnlyList<TicketAttachment>> SaveTicketWithAttachmentsAsync(
+        Ticket ticket,
+        bool isCreate,
+        IReadOnlyList<TicketAttachment> attachmentsToAdd,
+        IReadOnlyCollection<int> attachmentIdsToDelete,
+        CancellationToken cancellationToken = default)
+    {
+        await using var context = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var removedAttachments = new List<TicketAttachment>();
+
+        try
+        {
+            if (isCreate)
+            {
+                context.Tickets.Add(ticket);
+                // Generate the ticket ID in this transaction before assigning it to attachment rows.
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                var existing = await context.Tickets
+                    .FirstOrDefaultAsync(item => item.Id == ticket.Id, cancellationToken)
+                    ?? throw new KeyNotFoundException($"Ticket {ticket.Id} was not found.");
+
+                existing.Title = ticket.Title;
+                existing.Description = ticket.Description;
+                existing.Priority = ticket.Priority;
+                existing.Category = ticket.Category;
+                existing.Status = ticket.Status;
+            }
+
+            var deleteIds = attachmentIdsToDelete.Distinct().ToArray();
+            if (isCreate && deleteIds.Length > 0)
+                throw new ValidationException("Attachments cannot be deleted while creating a ticket.");
+
+            if (deleteIds.Length > 0)
+            {
+                removedAttachments = await context.TicketAttachments
+                    .Where(attachment => attachment.TicketId == ticket.Id && deleteIds.Contains(attachment.Id))
+                    .ToListAsync(cancellationToken);
+
+                if (removedAttachments.Count != deleteIds.Length)
+                    throw new ValidationException("One or more attachments do not belong to this ticket.");
+
+                context.TicketAttachments.RemoveRange(removedAttachments);
+            }
+
+            foreach (var attachment in attachmentsToAdd)
+            {
+                attachment.TicketId = ticket.Id;
+            }
+
+            if (attachmentsToAdd.Count > 0)
+                context.TicketAttachments.AddRange(attachmentsToAdd);
+
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return removedAttachments;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
     public async Task AssignTicketAsync(int ticketId, string? agentUserId)
     {
         using var context = await _factory.CreateDbContextAsync();
