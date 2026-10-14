@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 
 <div class="app-shell">
-    <AuthorizeView Roles="Employee,Agent,Manager">
+    <AuthorizeView Roles="@AppRoles.EmployeeAgentManager">
         <Authorized>
             <aside class="app-sidebar">
                 <a class="sidebar-brand" href="/dashboard" aria-label="Kestrel Helpdesk dashboard">
