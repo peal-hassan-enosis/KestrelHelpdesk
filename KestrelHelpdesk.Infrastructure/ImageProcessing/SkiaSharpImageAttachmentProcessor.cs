@@ -40,7 +40,7 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
 
         // Decode independently of the metadata codec, because checking frame count may
         // consume the codec stream. Even images below the dimension limit must be valid.
-        using var decoded = SKBitmap.Decode(bytes) ?? throw InvalidImage();
+        using var decoded = DecodeBitmap(bytes);
 
         // Small, valid images are stored byte-for-byte as the single stored output.
         // Their metadata is still derived from the detected file format and dimensions.
@@ -101,6 +101,20 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
         await using var buffer = new MemoryStream();
         await source.CopyToAsync(buffer, cancellationToken);
         return buffer.ToArray();
+    }
+
+    private static SKBitmap DecodeBitmap(byte[] bytes)
+    {
+        try
+        {
+            return SKBitmap.Decode(bytes) ?? throw InvalidImage();
+        }
+        catch (SKException ex)
+        {
+            throw new InvalidDataException(
+                "The image could not be decoded. Upload a valid, non-animated PNG, JPG/JPEG, GIF, or WebP image.",
+                ex);
+        }
     }
 
     private static void EnsureSupportedStillImage(SKCodec codec, string extension)
