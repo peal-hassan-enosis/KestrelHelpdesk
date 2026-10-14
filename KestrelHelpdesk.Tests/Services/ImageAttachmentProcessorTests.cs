@@ -30,6 +30,23 @@ public sealed class ImageAttachmentProcessorTests
     }
 
     [Fact]
+    public async Task ResizesPortraitJpegWhenTargetDimensionsAreNotASupportedDecodeScale()
+    {
+        // Mirrors a common camera/stock-photo shape whose longest side needs resizing.
+        var bytes = CreateJpeg(1365, 2048);
+
+        await using var input = new MemoryStream(bytes);
+        var processed = await _processor.ProcessAsync(input, ".jpg");
+
+        Assert.NotNull(processed);
+        Assert.True(processed.WasResized);
+        Assert.Equal(1066, processed.Width);
+        Assert.Equal(1600, processed.Height);
+        Assert.Equal(".jpg", processed.Extension);
+        Assert.Equal("image/jpeg", processed.ContentType);
+    }
+
+    [Fact]
     public async Task DoesNotEnlargeAnImageThatIsAlreadyWithinLimit()
     {
         var bytes = CreateJpeg(800, 600);
