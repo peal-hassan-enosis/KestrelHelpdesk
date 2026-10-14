@@ -38,15 +38,12 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
 
         var sourceFormat = GetFormat(codec.EncodedFormat, extension);
 
-        // Decode independently of the metadata codec, because checking frame count may
-        // consume the codec stream. Even images below the dimension limit must be valid.
-        using var decoded = DecodeBitmap(bytes);
-
         // Small, valid images are stored byte-for-byte as the single stored output.
-        // Their metadata is still derived from the detected file format and dimensions.
+        // Decode them to validate the actual pixel data before accepting the upload.
         var longestSide = Math.Max(displayWidth, displayHeight);
         if (longestSide <= TicketAttachmentPolicy.MaxImageLongestSide)
         {
+            using var decoded = DecodeBitmap(bytes);
             return new ProcessedAttachmentImage(
                 bytes,
                 sourceFormat.Extension,
@@ -58,18 +55,18 @@ public sealed class SkiaSharpImageAttachmentProcessor : IImageAttachmentProcesso
 
         try
         {
-            using var oriented = ApplyOrientation(decoded, origin);
-            var scale = TicketAttachmentPolicy.MaxImageLongestSide /
-                        (double)Math.Max(oriented.Width, oriented.Height);
-            var targetWidth = Math.Max(1, (int)Math.Round(oriented.Width * scale));
-            var targetHeight = Math.Max(1, (int)Math.Round(oriented.Height * scale));
+            // Decode large sources directly to the target raw dimensions to avoid loading
+            // a full-resolution bitmap into memory for very large compressed images.
+            var scale = TicketAttachmentPolicy.MaxImageLongestSide / (double)longestSide;
+            var targetRawWidth = Math.Max(1, (int)Math.Round(info.Width * scale));
+            var targetRawHeight = Math.Max(1, (int)Math.Round(info.Height * scale));
 
-            using var resized = oriented.Resize(
-                new SKImageInfo(targetWidth, targetHeight),
-                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
-
-            if (resized is null)
-                throw new InvalidDataException("The image could not be resized. Try saving it as a new image and uploading it again.");
+            using var resizeStream = new MemoryStream(bytes, writable: false);
+            using var resizeCodec = SKCodec.Create(resizeStream) ?? throw InvalidImage();
+            using var decoded = SKBitmap.Decode(
+                resizeCodec,
+                new SKImageInfo(targetRawWidth, targetRawHeight)) ?? throw InvalidImage();
+            using var resized = ApplyOrientation(decoded, origin);
 
             // SkiaSharp does not encode GIF animation. A static GIF that needs resizing
             // becomes a static PNG, with a matching filename extension and content type.
