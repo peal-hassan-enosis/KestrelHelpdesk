@@ -13,7 +13,7 @@
 @inject NavigationManager NavigationManager
 @inject BrowserTimeZoneService BrowserTimeZone
 
-@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
+@attribute [Authorize(Roles = AppRoles.EmployeeAgentManager)]
 @rendermode InteractiveServer
 @implements IDisposable
 
