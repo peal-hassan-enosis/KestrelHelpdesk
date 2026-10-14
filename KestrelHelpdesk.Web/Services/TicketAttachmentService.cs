@@ -3,6 +3,7 @@ using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.Logging;
 
 namespace KestrelHelpdesk.Web.Services;
 
@@ -12,10 +13,10 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
     public int MaxFilesPerTicket => TicketAttachmentPolicy.MaxFilesPerTicket;
 
     private readonly ITicketService _ticketService;
-    private readonly ITicketAttachmentRepository _repository;
     private readonly IFileStorageService _storage;
     private readonly ICurrentUserContext _currentUser;
     private readonly IImageAttachmentProcessor _imageProcessor;
+    private readonly ILogger<TicketAttachmentService> _logger;
 
     // The validated image output is reused by ApplyChangesAsync so that validation and
     // storage operate on the exact same processed bytes without resizing the image twice.
@@ -24,16 +25,16 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
 
     public TicketAttachmentService(
         ITicketService ticketService,
-        ITicketAttachmentRepository repository,
         IFileStorageService storage,
         ICurrentUserContext currentUser,
-        IImageAttachmentProcessor imageProcessor)
+        IImageAttachmentProcessor imageProcessor,
+        ILogger<TicketAttachmentService> logger)
     {
         _ticketService = ticketService;
-        _repository = repository;
         _storage = storage;
         _currentUser = currentUser;
         _imageProcessor = imageProcessor;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<string>> ValidateFilesAsync(
@@ -126,33 +127,40 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
         return errors;
     }
 
-    public async Task ApplyChangesAsync(
-        int ticketId,
+    public async Task SaveTicketChangesAsync(
+        Ticket ticketToSave,
+        bool isCreateMode,
         IReadOnlyList<IBrowserFile> files,
         IReadOnlyCollection<int> attachmentIdsToDelete,
         CancellationToken cancellationToken = default)
     {
+        var ticketId = isCreateMode ? 0 : ticketToSave.Id;
         var savedFiles = new List<(string StoredFileName, string StoragePath)>();
 
         try
         {
-            var validationErrors = await ValidateFilesAsync(ticketId, files, attachmentIdsToDelete, cancellationToken);
+            var validationErrors = await ValidateFilesAsync(
+                ticketId,
+                files,
+                attachmentIdsToDelete,
+                cancellationToken);
+
             if (validationErrors.Count > 0)
                 throw new ValidationException(string.Join(" ", validationErrors));
 
-            var ticket = await _ticketService.GetTicketByIdAsync(ticketId);
-            if (ticket is null)
-                throw new UnauthorizedAccessException();
+            Ticket? existingTicket = null;
+            if (!isCreateMode)
+            {
+                existingTicket = await _ticketService.GetTicketByIdAsync(ticketId);
+                if (existingTicket is null)
+                    throw new UnauthorizedAccessException("You are not allowed to update this ticket.");
+            }
 
-            var existingAttachments = ticket.Attachments ?? [];
-            var attachmentsToDelete = existingAttachments
-                .Where(a => attachmentIdsToDelete.Contains(a.Id))
-                .ToList();
-
+            var currentAttachments = existingTicket?.Attachments ?? [];
             var currentUser = await _currentUser.GetCurrentUserAsync();
             var userId = currentUser?.UserId;
             if (string.IsNullOrWhiteSpace(userId))
-                throw new UnauthorizedAccessException();
+                throw new UnauthorizedAccessException("You must be signed in to upload attachments.");
 
             var newAttachments = new List<TicketAttachment>();
             foreach (var file in files)
@@ -182,8 +190,6 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                     contentType = processedImage.ContentType;
                     fileSize = processedImage.Content.LongLength;
 
-                    // When processing changes an extension (for example, a resized static GIF
-                    // becomes PNG), keep the downloadable filename consistent with stored bytes.
                     if (!extension.Equals(uploadedExtension, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(contentType, originalContentType, StringComparison.OrdinalIgnoreCase))
                     {
@@ -207,6 +213,8 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
 
                 newAttachments.Add(new TicketAttachment
                 {
+                    // TicketRepository assigns the real key inside the same DB transaction
+                    // for new tickets; existing tickets already have their key.
                     TicketId = ticketId,
                     OriginalFileName = displayName,
                     StoredFileName = storedFile.StoredFileName,
@@ -218,19 +226,48 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                 });
             }
 
-            if (newAttachments.Count > 0)
-                await _repository.AddRangeAsync(newAttachments, cancellationToken);
+            // Ticket data and attachment metadata are committed together. If the database
+            // transaction fails, the catch block removes the staged physical uploads.
+            var deletedAttachments = await _ticketService.SaveTicketWithAttachmentsAsync(
+                ticketToSave,
+                isCreateMode,
+                newAttachments,
+                attachmentIdsToDelete,
+                cancellationToken);
 
-            if (attachmentsToDelete.Count > 0)
-                await _repository.DeleteRangeAsync(attachmentsToDelete, cancellationToken);
-
-            foreach (var attachment in attachmentsToDelete)
-                await _storage.DeleteAsync(attachment.StoragePath, cancellationToken);
+            // Delete old file bytes only after the transaction succeeds. A cleanup failure
+            // must not make a committed ticket update look as if it rolled back.
+            foreach (var attachment in deletedAttachments)
+            {
+                try
+                {
+                    await _storage.DeleteAsync(attachment.StoragePath, CancellationToken.None);
+                }
+                catch (Exception cleanupException)
+                {
+                    _logger.LogWarning(
+                        cleanupException,
+                        "Could not remove stored file for deleted ticket attachment {AttachmentId}.",
+                        attachment.Id);
+                }
+            }
         }
         catch
         {
             foreach (var savedFile in savedFiles)
-                await _storage.DeleteAsync(savedFile.StoragePath, CancellationToken.None);
+            {
+                try
+                {
+                    await _storage.DeleteAsync(savedFile.StoragePath, CancellationToken.None);
+                }
+                catch (Exception cleanupException)
+                {
+                    _logger.LogError(
+                        cleanupException,
+                        "Could not remove staged upload {StoredFileName} after a failed ticket save.",
+                        savedFile.StoredFileName);
+                }
+            }
 
             throw;
         }
@@ -240,4 +277,5 @@ public sealed class TicketAttachmentService : ITicketAttachmentService
                 _processedImages.Remove(file);
         }
     }
+
 }
