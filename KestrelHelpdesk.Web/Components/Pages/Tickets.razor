@@ -16,7 +16,7 @@
       <p class="page-subtitle">Find a request, check its status and keep ownership clear.</p>
     </div>
     <div class="page-actions">
-      <AuthorizeView Roles="Employee, Agent, Manager">
+      <AuthorizeView Roles="@AppRoles.EmployeeAgentManager">
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting" OnClick="ExportCurrentPageAsync">
           <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="me-1" />
           @(exportingCurrentPage ? "Exporting..." : "Export page")
@@ -72,7 +72,7 @@
 </MudGrid>
 
 <MudPaper Elevation="1" Class="pa-2 ticket-grid-surface">
-  <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="15" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
+  <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="@AppConstants.TicketBoard.DefaultPageSize" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
     <Columns>
       <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
       <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
@@ -140,7 +140,7 @@
       </div>
     </LoadingContent>
     <PagerContent>
-      <MudDataGridPager T="Ticket" PageSizeOptions="@(new[] { 15, 30, 50 })" />
+      <MudDataGridPager T="Ticket" PageSizeOptions="@AppConstants.TicketBoard.PageSizeOptions" />
     </PagerContent>
   </MudDataGrid>
 </MudPaper>
