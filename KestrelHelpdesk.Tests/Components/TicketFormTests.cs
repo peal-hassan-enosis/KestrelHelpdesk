@@ -1,6 +1,6 @@
 using Bunit;
 using KestrelHelpdesk.Core.Models;
-using KestrelHelpdesk.Web.Components.Pages;
+using KestrelHelpdesk.Web.Components.Helper;
 using KestrelHelpdesk.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
