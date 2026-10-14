@@ -17,14 +17,31 @@
     </div>
     <div class="page-actions">
       <AuthorizeView Roles="Employee, Agent, Manager">
-        <MudMenu Label="Export" Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting">
-          <MudMenuItem Label="Current page" Icon="@Icons.Material.Filled.Description" OnClick="ExportCurrentPageAsync" />
-          <MudMenuItem Label="All tickets" Icon="@Icons.Material.Filled.Description" OnClick="ExportAllTicketsAsync" />
-        </MudMenu>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting" OnClick="ExportCurrentPageAsync">
+          <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="me-1" />
+          @(exporting ? "Exporting..." : "Export page")
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting" OnClick="ExportAllTicketsAsync">
+          <MudIcon Icon="@Icons.Material.Filled.Download" Class="me-1" />
+          Export all
+        </MudButton>
         <MudButton Href="/tickets/new" Variant="Variant.Filled" Color="Color.Primary">Create ticket</MudButton>
       </AuthorizeView>
     </div>
   </header>
+
+  @if (!string.IsNullOrWhiteSpace(exportErrorMessage))
+  {
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4" CloseIcon="true" OnClose="@(() => exportErrorMessage = null)">
+      @exportErrorMessage
+    </MudAlert>
+  }
+  @if (!string.IsNullOrWhiteSpace(exportSuccessMessage))
+  {
+    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-4" CloseIcon="true" OnClose="@(() => exportSuccessMessage = null)">
+      @exportSuccessMessage
+    </MudAlert>
+  }
 
 @if (isAgent)
 {
