@@ -194,6 +194,14 @@
     {
       attachmentError = ex.Message;
     }
+    catch (UnauthorizedAccessException)
+    {
+      attachmentError = "You are not allowed to access this ticket or its attachments.";
+    }
+    catch (KeyNotFoundException)
+    {
+      attachmentError = "The ticket or one of its attachments no longer exists. Reload the page and try again.";
+    }
   }
 
   private static string GetStatusLabel(TicketStatus status) => status switch
