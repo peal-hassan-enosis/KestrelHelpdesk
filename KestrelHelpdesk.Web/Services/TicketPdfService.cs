@@ -1,6 +1,8 @@
 using System.Net.Mail;
 using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
+using iText.Kernel.Font;
+using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Action;
 using iText.Layout;
