@@ -52,13 +52,13 @@
         <InputSelect id="ticket-status" @bind-Value="TicketModel.Status" class="form-select">
           @foreach (var status in Enum.GetValues<TicketStatus>())
           {
-            <option value="@status">@status</option>
+            <option value="@status">@GetStatusLabel(status)</option>
           }
         </InputSelect>
       }
       else
       {
-        <input id="ticket-status" class="form-control" value="@TicketModel.Status" disabled />
+        <input id="ticket-status" class="form-control" value="@GetStatusLabel(TicketModel.Status)" disabled />
       }
     </div>
   }
@@ -196,6 +196,12 @@
       attachmentError = ex.Message;
     }
   }
+
+  private static string GetStatusLabel(TicketStatus status) => status switch
+  {
+    TicketStatus.InProgress => "In Progress",
+    _ => status.ToString()
+  };
 
   private static string FormatFileSize(long bytes) => bytes switch
   {
