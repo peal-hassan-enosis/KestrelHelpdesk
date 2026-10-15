@@ -87,7 +87,33 @@ public partial class Tickets : IAsyncDisposable
             currentSortDescending);
 
         currentPageTickets = items;
+        await IncludeFormerAssigneesAsync(items);
         return new GridData<Ticket> { Items = items, TotalItems = totalCount };
+    }
+
+    private async Task IncludeFormerAssigneesAsync(IReadOnlyList<Ticket> tickets)
+    {
+        var activeAgentIds = agents.Select(agent => agent.Id).ToHashSet(StringComparer.Ordinal);
+        var formerAssigneeIds = tickets
+            .Select(ticket => ticket.AssignedToUserId)
+            .Where(userId => !string.IsNullOrWhiteSpace(userId) && !activeAgentIds.Contains(userId))
+            .Select(userId => userId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (formerAssigneeIds.Count == 0)
+            return;
+
+        var formerAssignees = await UserDirectory.GetUsersByIdsAsync(formerAssigneeIds);
+        if (formerAssignees.Count == 0)
+            return;
+
+        agents = agents
+            .Concat(formerAssignees)
+            .GroupBy(agent => agent.Id, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(agent => agent.DisplayName)
+            .ToList();
     }
 
     private async Task ExportCurrentPageAsync()
@@ -276,6 +302,14 @@ public partial class Tickets : IAsyncDisposable
         string.IsNullOrWhiteSpace(userId)
             ? "-"
             : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? AppLimits.UnknownAgent;
+
+    private bool IsActiveAgent(string userId) =>
+        agents.Any(agent => agent.Id == userId) &&
+        activeAgentIds.Contains(userId);
+
+    private HashSet<string> activeAgentIds => agents
+        .Select(agent => agent.Id)
+        .ToHashSet(StringComparer.Ordinal);
 
     private static Color GetStatusColor(TicketStatus status) => status switch
     {
