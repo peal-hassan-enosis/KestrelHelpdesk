@@ -1,5 +1,6 @@
 @page "/tickets/{id:int}/edit"
 @using System.ComponentModel.DataAnnotations
+@using System.Transactions
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
@@ -104,12 +105,18 @@ else
 
     try
     {
+      using var transaction = new TransactionScope(
+          TransactionScopeOption.Required,
+          new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+          TransactionScopeAsyncFlowOption.Enabled);
+
       await TicketService.UpdateTicketAsync(submission.Ticket);
       await TicketAttachmentService.ApplyChangesAsync(
           submission.Ticket.Id,
           submission.NewFiles,
           submission.AttachmentIdsToDelete);
 
+      transaction.Complete();
       Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
     }
     catch (ValidationException ex)
@@ -128,8 +135,8 @@ else
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Failed to update ticket {TicketId}.", submission.Ticket.Id);
-      updateErrorMessage = "The ticket could not be updated. Please try again.";
+      Logger.LogError(ex, "Failed to update ticket {TicketId}. Ticket and attachment changes were rolled back.", submission.Ticket.Id);
+      updateErrorMessage = "The ticket could not be updated. No changes were saved. Please try again.";
     }
   }
 }
