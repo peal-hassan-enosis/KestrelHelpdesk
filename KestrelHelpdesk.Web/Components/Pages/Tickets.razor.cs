@@ -128,19 +128,32 @@ public partial class Tickets : IAsyncDisposable
 
         try
         {
-            var tickets = await TicketQueryService.GetTicketsForExportAsync(
-                StatusQuery,
-                searchTerm,
-                activeScope,
-                notAssignedOnly,
-                currentSortBy,
-                currentSortDescending);
+            var query = new List<string>();
+            if (!string.IsNullOrWhiteSpace(StatusQuery))
+                query.Add($"status={Uri.EscapeDataString(StatusQuery)}");
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+                query.Add($"search={Uri.EscapeDataString(searchTerm)}");
 
-            await GenerateAndDownloadPdfAsync(tickets, "All Tickets");
+            query.Add($"scope={activeScope}");
+            query.Add($"notAssignedOnly={notAssignedOnly}");
+            query.Add($"sortDescending={currentSortDescending}");
+
+            if (!string.IsNullOrWhiteSpace(currentSortBy))
+                query.Add($"sortBy={Uri.EscapeDataString(currentSortBy)}");
+
+            if (BrowserTimeZone.IsInitialized && !string.IsNullOrWhiteSpace(BrowserTimeZone.TimeZoneId))
+                query.Add($"timeZoneId={Uri.EscapeDataString(BrowserTimeZone.TimeZoneId)}");
+
+            var downloadUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/tickets/export/pdf?{string.Join('&', query)}";
+            var moduleUrl = new Uri(new Uri(NavigationManager.BaseUri), "js/pdf-export.js").ToString();
+            pdfModule ??= await JS.InvokeAsync<IJSObjectReference>("import", moduleUrl);
+            await pdfModule.InvokeVoidAsync("downloadPdfFromUrl", downloadUrl);
+
+            exportSuccessMessage = "PDF export started for all tickets in the current view.";
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to export all tickets as PDF.");
+            Logger.LogError(ex, "Failed to start export of all tickets as PDF.");
             exportErrorMessage = GetExportErrorMessage(ex);
         }
         finally
