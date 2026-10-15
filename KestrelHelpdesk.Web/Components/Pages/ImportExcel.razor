@@ -191,7 +191,9 @@
 
     private void CancelImport()
     {
+        _selectedFile = null;
         _validation = null;
         _successMessage = "Import cancelled. No tickets were created.";
+        _errorMessage = null;
     }
 }
