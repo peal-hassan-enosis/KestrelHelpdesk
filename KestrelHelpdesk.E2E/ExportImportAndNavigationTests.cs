@@ -36,7 +36,7 @@ public sealed class ExportImportAndNavigationTests : E2ETestBase
 
         await Page.GotoAsync("/tickets");
         await Page.GetByPlaceholder("Title or description").FillAsync(ticketId.ToString());
-        await Page.GetByRole(AriaRole.Button, new() { Name = "View" }).First.ClickAsync();
+        await Page.GetByRole(AriaRole.Link, new() { Name = "View" }).First.ClickAsync();
         await Expect(Page).ToHaveURLAsync(new Regex($"/tickets/{ticketId}/?$"));
         await Page.GetByRole(AriaRole.Link, new() { Name = "Back to board" }).ClickAsync();
         await Expect(Page).ToHaveURLAsync(new Regex(@"/tickets/?$"));
