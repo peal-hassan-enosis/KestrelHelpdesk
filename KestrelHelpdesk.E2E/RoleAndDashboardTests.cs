@@ -90,7 +90,7 @@ public sealed class RoleAndDashboardTests : E2ETestBase
         await Expect(Page).Not.ToHaveURLAsync(new Regex(@"/role-assignment/?$"));
     }
 
-    private static async Task LoginAsync(IPage page, string email, string password, string returnPath)
+    private async Task LoginAsync(IPage page, string email, string password, string returnPath)
     {
         await page.GotoAsync($"/Account/Login?ReturnUrl={Uri.EscapeDataString(returnPath)}");
         await page.GetByLabel("Email").FillAsync(email);
