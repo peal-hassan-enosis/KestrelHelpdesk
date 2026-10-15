@@ -12,6 +12,11 @@ public sealed class ExportImportAndNavigationTests : E2ETestBase
         await LoginAsync(EmployeeEmail, EmployeePassword);
         await Page.GotoAsync("/tickets");
 
+        // The export action uses the tickets loaded into the grid. Wait for the
+        // first data row so the grid has completed its server-side load before
+        // triggering the export.
+        await Expect(Page.GetByRole(AriaRole.Row).Nth(1)).ToBeVisibleAsync();
+
         // The export implementation creates the PDF as a Blob and starts the
         // browser download from JavaScript. Verify the application reports that
         // the export started instead of relying on Playwright's Download event,
