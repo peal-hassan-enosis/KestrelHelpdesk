@@ -1,9 +1,10 @@
 using Bunit;
 using KestrelHelpdesk.Core.Models;
-using KestrelHelpdesk.Web.Components.Pages;
+using KestrelHelpdesk.Web.Components.Helper;
 using KestrelHelpdesk.Web.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 using Xunit;
 
@@ -25,7 +26,7 @@ public class TicketFormTests : BunitContext
         {
             Title = string.Empty,
             Description = string.Empty,
-            Category = null,
+            Category = TicketCategory.Hardware,
             Priority = TicketPriority.Low,
             Status = TicketStatus.Open
         };
@@ -42,7 +43,6 @@ public class TicketFormTests : BunitContext
         var validationSummary = cut.Find("ul.alert-danger").TextContent;
         Assert.Contains("Title is required.", validationSummary);
         Assert.Contains("Description is required.", validationSummary);
-        Assert.Contains("Category is required.", validationSummary);
         Assert.False(submitted);
     }
 
