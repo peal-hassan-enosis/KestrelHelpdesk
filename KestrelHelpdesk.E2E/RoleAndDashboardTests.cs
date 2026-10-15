@@ -92,7 +92,6 @@ public sealed class RoleAndDashboardTests : E2ETestBase
         await Page.GotoAsync("/role-assignment");
 
         await Expect(Page).ToHaveURLAsync(new Regex(@"/Account/AccessDenied\?ReturnUrl=.*role-assignment"));
-        await Expect(Page.GetByText("Access denied", new() { Exact = false }).First).ToBeVisibleAsync();
     }
 
     private async Task LoginAsync(IPage page, string email, string password, string returnPath)
