@@ -50,106 +50,127 @@
     </MudAlert>
   }
 
-@if (isAgent)
-{
-  <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Class="mb-4">
-    <MudButton Variant="@(activeScope == TicketScope.AgentAssigned ? Variant.Filled : Variant.Outlined)" OnClick="() => SetScope(TicketScope.AgentAssigned)">Assigned</MudButton>
-    <MudButton Variant="@(activeScope == TicketScope.AgentCreated ? Variant.Filled : Variant.Outlined)" OnClick="() => SetScope(TicketScope.AgentCreated)">Created by Me</MudButton>
-  </MudButtonGroup>
-}
+  @if (isAgent)
+  {
+    <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Class="mb-4">
+      <MudButton Variant="@(activeScope == TicketScope.AgentAssigned ? Variant.Filled : Variant.Outlined)" OnClick="() => SetScope(TicketScope.AgentAssigned)">Assigned</MudButton>
+      <MudButton Variant="@(activeScope == TicketScope.AgentCreated ? Variant.Filled : Variant.Outlined)" OnClick="() => SetScope(TicketScope.AgentCreated)">Created by Me</MudButton>
+    </MudButtonGroup>
+  }
 
-@if (isManager)
-{
-  <MudCheckBox T="bool" @bind-Value="notAssignedOnly" @bind-Value:after="RefreshGrid" Label="Not Assigned (Open only)" Class="mb-3" />
-}
+  @if (isManager)
+  {
+    <MudCheckBox T="bool" @bind-Value="notAssignedOnly" @bind-Value:after="RefreshGrid" Label="Not Assigned (Open only)" Class="mb-3" />
 
-<MudGrid Class="mb-4">
-  <MudItem xs="12" md="6">
-    <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
-    <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
-  </MudItem>
-  <MudItem xs="12" md="4">
-    <label for="status-filter" class="form-label">Status</label>
-    <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
-      <option value="">All Statuses</option>
-      <option value="@TicketStatus.Open.ToString()">Open</option>
-      <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
-      <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
-    </select>
-  </MudItem>
-</MudGrid>
+    <MudGrid Class="mb-2">
+      <MudItem xs="12">
+        <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
+      </MudItem>
+    </MudGrid>
 
-<MudPaper Elevation="1" Class="pa-2 ticket-grid-surface">
-  <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="@AppLimits.DefaultPageSize" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
-    <Columns>
-      <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
-      <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
-      <PropertyColumn Property="@(t => t.Status)" Title="Status" Sortable="true">
-        <CellTemplate>
-          <MudChip Size="Size.Small" Color="GetStatusColor(context.Item.Status)" Variant="Variant.Filled">@GetStatusLabel(context.Item.Status)</MudChip>
-        </CellTemplate>
-      </PropertyColumn>
-      <PropertyColumn Property="@(t => t.Priority)" Title="Priority" Sortable="true">
-        <CellTemplate>
-          <MudChip Size="Size.Small" Color="GetPriorityColor(context.Item.Priority)" Variant="Variant.Filled">@context.Item.Priority</MudChip>
-        </CellTemplate>
-      </PropertyColumn>
-      <TemplateColumn Title="Assigned To" Sortable="false">
-        <CellTemplate>@GetAssigneeName(context.Item.AssignedToUserId)</CellTemplate>
-      </TemplateColumn>
-      <PropertyColumn Property="@(t => t.CreatedAt)" Title="Created" Sortable="true">
-        <CellTemplate>@(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(context.Item.CreatedAt) : "Loading local time...")</CellTemplate>
-      </PropertyColumn>
-      <TemplateColumn Title="Assignment" Sortable="false">
-        <CellTemplate Context="cell">
-          <AuthorizeView Roles="Manager">
-            <select class="form-select form-select-sm" value="@cell.Item.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(cell.Item.Id, e)">
-              <option value="">Unassigned</option>
-              @foreach (var agent in agents)
+    <MudGrid Class="mb-4">
+      <MudItem xs="12" sm="6" md="4">
+        <label for="status-filter" class="form-label">Status</label>
+        <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
+          <option value="">All Statuses</option>
+          <option value="@TicketStatus.Open.ToString()">Open</option>
+          <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
+          <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
+        </select>
+      </MudItem>
+    </MudGrid>
+  }
+  else
+  {
+    <MudGrid Class="mb-4">
+      <MudItem xs="12" md="6">
+        <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
+      </MudItem>
+      <MudItem xs="12" md="4">
+        <label for="status-filter" class="form-label">Status</label>
+        <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
+          <option value="">All Statuses</option>
+          <option value="@TicketStatus.Open.ToString()">Open</option>
+          <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
+          <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
+        </select>
+      </MudItem>
+    </MudGrid>
+  }
+
+  <MudPaper Elevation="1" Class="pa-2 ticket-grid-surface">
+    <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="@AppLimits.DefaultPageSize" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
+      <Columns>
+        <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
+        <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
+        <PropertyColumn Property="@(t => t.Status)" Title="Status" Sortable="true">
+          <CellTemplate>
+            <MudChip Size="Size.Small" Color="GetStatusColor(context.Item.Status)" Variant="Variant.Filled">@GetStatusLabel(context.Item.Status)</MudChip>
+          </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="@(t => t.Priority)" Title="Priority" Sortable="true">
+          <CellTemplate>
+            <MudChip Size="Size.Small" Color="GetPriorityColor(context.Item.Priority)" Variant="Variant.Filled">@context.Item.Priority</MudChip>
+          </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Assigned To" Sortable="false">
+          <CellTemplate>@GetAssigneeName(context.Item.AssignedToUserId)</CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="@(t => t.CreatedAt)" Title="Created" Sortable="true">
+          <CellTemplate>@(BrowserTimeZone.IsInitialized ? BrowserTimeZone.Format(context.Item.CreatedAt) : "Loading local time...")</CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Assignment" Sortable="false">
+          <CellTemplate Context="cell">
+            <AuthorizeView Roles="Manager">
+              <select class="form-select form-select-sm" value="@cell.Item.AssignedToUserId" @onchange="e => ManagerAssignmentChanged(cell.Item.Id, e)">
+                <option value="">Unassigned</option>
+                @foreach (var agent in agents)
+                {
+                  <option value="@agent.Id">@agent.DisplayName</option>
+                }
+              </select>
+            </AuthorizeView>
+            <AuthorizeView Roles="Agent">
+              @if (activeScope == TicketScope.AgentCreated)
               {
-                <option value="@agent.Id">@agent.DisplayName</option>
+                @if (cell.Item.AssignedToUserId == currentUserId)
+                {
+                  <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default" OnClick="() => AssignToMe(cell.Item.Id, null)">Unassign</MudButton>
+                }
+                else
+                {
+                  <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => AssignToMe(cell.Item.Id, currentUserId)">Assign to Me</MudButton>
+                }
               }
-            </select>
-          </AuthorizeView>
-          <AuthorizeView Roles="Agent">
-            @if (activeScope == TicketScope.AgentCreated)
-            {
-              @if (cell.Item.AssignedToUserId == currentUserId)
-              {
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default" OnClick="() => AssignToMe(cell.Item.Id, null)">Unassign</MudButton>
-              }
-              else
-              {
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => AssignToMe(cell.Item.Id, currentUserId)">Assign to Me</MudButton>
-              }
-            }
-          </AuthorizeView>
-        </CellTemplate>
-      </TemplateColumn>
-      <TemplateColumn Title="Actions" Sortable="false">
-        <CellTemplate>
-          <MudButton Href="@($"/tickets/{context.Item.Id}")" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">View</MudButton>
-          <MudButton Href="@($"/tickets/{context.Item.Id}/edit")" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" Class="ms-1">Edit</MudButton>
-        </CellTemplate>
-      </TemplateColumn>
-    </Columns>
-    <NoRecordsContent>
-      <div class="empty-state ticket-empty-state">
-        <span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg></span>
-        <h3>No tickets found</h3>
-        <p>No requests match this view and filter combination. Try a different search or status, or create a new ticket.</p>
-        <MudButton Href="/tickets/new" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3">Create ticket</MudButton>
-      </div>
-    </NoRecordsContent>
-    <LoadingContent>
-      <div class="empty-state ticket-loading-state">
-        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
-        <p class="mt-3">Loading tickets…</p>
-      </div>
-    </LoadingContent>
-    <PagerContent>
-      <MudDataGridPager T="Ticket" PageSizeOptions="@(new[] { AppLimits.DefaultPageSize, AppLimits.MediumPageSize, AppLimits.LargePageSize })" />
-    </PagerContent>
-  </MudDataGrid>
-</MudPaper>
+            </AuthorizeView>
+          </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Actions" Sortable="false">
+          <CellTemplate>
+            <MudButton Href="@($"/tickets/{context.Item.Id}")" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">View</MudButton>
+            <MudButton Href="@($"/tickets/{context.Item.Id}/edit")" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" Class="ms-1">Edit</MudButton>
+          </CellTemplate>
+        </TemplateColumn>
+      </Columns>
+      <NoRecordsContent>
+        <div class="empty-state ticket-empty-state">
+          <span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg></span>
+          <h3>No tickets found</h3>
+          <p>No requests match this view and filter combination. Try a different search or status, or create a new ticket.</p>
+          <MudButton Href="/tickets/new" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3">Create ticket</MudButton>
+        </div>
+      </NoRecordsContent>
+      <LoadingContent>
+        <div class="empty-state ticket-loading-state">
+          <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
+          <p class="mt-3">Loading tickets…</p>
+        </div>
+      </LoadingContent>
+      <PagerContent>
+        <MudDataGridPager T="Ticket" PageSizeOptions="@(new[] { AppLimits.DefaultPageSize, AppLimits.MediumPageSize, AppLimits.LargePageSize })" />
+      </PagerContent>
+    </MudDataGrid>
+  </MudPaper>
 </div>
