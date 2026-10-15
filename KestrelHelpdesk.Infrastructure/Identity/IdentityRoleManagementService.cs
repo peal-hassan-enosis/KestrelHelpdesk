@@ -10,13 +10,16 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentUserContext _currentUser;
+    private readonly ITicketRepository _ticketRepository;
 
     public IdentityRoleManagementService(
         UserManager<ApplicationUser> userManager,
-        ICurrentUserContext currentUser)
+        ICurrentUserContext currentUser,
+        ITicketRepository ticketRepository)
     {
         _userManager = userManager;
         _currentUser = currentUser;
+        _ticketRepository = ticketRepository;
     }
 
     public async Task<IReadOnlyList<RoleManagementUser>> GetAssignedUsersAsync(
@@ -53,6 +56,8 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
         if (currentRoles.Contains(AppRoles.Manager, StringComparer.Ordinal))
             throw new UnauthorizedAccessException("The manager account cannot be reassigned.");
 
+        var wasAgent = currentRoles.Contains(AppRoles.Agent, StringComparer.Ordinal);
+
         foreach (var currentRole in currentRoles.Where(IsManagedRole).ToList())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -63,6 +68,12 @@ public sealed class IdentityRoleManagementService : IRoleManagementService
         cancellationToken.ThrowIfCancellationRequested();
         var assignResult = await _userManager.AddToRoleAsync(user, role);
         EnsureSuccess(assignResult, $"Could not assign role '{role}'.");
+
+        if (wasAgent && role == AppRoles.Employee)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _ticketRepository.UnassignTicketsByUserAsync(user.Id, cancellationToken);
+        }
     }
 
     private async Task<IReadOnlyList<RoleManagementUser>> GetUsersAsync(
