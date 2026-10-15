@@ -2,6 +2,7 @@
 @inject ITicketAttachmentService TicketAttachmentService
 @implements IAsyncDisposable
 @using System.ComponentModel.DataAnnotations
+@using KestrelHelpdesk.Core.Constants
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Components.Forms
 @using KestrelHelpdesk.Web.Services
@@ -74,7 +75,7 @@
       <span class="file-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg></span>
       <span class="file-upload-copy">
         <strong>Select supporting files</strong>
-        <small>PDF, images, Office files, CSV, text or ZIP · Up to 3 files, 10 MB each</small>
+        <small>PDF, images, Office files, CSV, text or ZIP · Up to @AppLimits.MaxAttachmentsPerTicket files, @(AppLimits.MaxAttachmentSizeBytes / (1024 * 1024)) MB each</small>
         <small class="file-upload-image-note">Images with a longest side over 1600 px are automatically resized proportionally. Animated images aren't supported.</small>
       </span>
       <InputFile OnChange="HandleFilesSelected" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" />
@@ -147,7 +148,7 @@
     if (selectedFiles.Count > TicketAttachmentService.MaxFilesPerTicket || finalCount > TicketAttachmentService.MaxFilesPerTicket)
     {
       selectedFiles.Clear();
-      attachmentError = "A ticket can have a maximum of 3 attachments.";
+      attachmentError = $"A ticket can have a maximum of {AppLimits.MaxAttachmentsPerTicket} attachments.";
       return;
     }
 
@@ -155,7 +156,7 @@
     if (oversized is not null)
     {
       selectedFiles.Clear();
-      attachmentError = $"{oversized.Name} exceeds the 10 MB file size limit.";
+      attachmentError = $"{oversized.Name} exceeds the {AppLimits.MaxAttachmentSizeBytes / (1024 * 1024)} MB file size limit.";
     }
   }
 
