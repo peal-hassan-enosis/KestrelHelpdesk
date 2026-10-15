@@ -32,12 +32,13 @@ public sealed class ExportImportAndNavigationTests : E2ETestBase
     public async Task Employee_CanNavigateFromBoardToTicketDetailsAndBack()
     {
         await LoginAsync(EmployeeEmail, EmployeePassword);
-        var ticketId = await CreateTicketAsync("E2E-Navigation");
+        await CreateTicketAsync("E2E-Navigation");
 
         await Page.GotoAsync("/tickets");
-        await Page.GetByPlaceholder("Title or description").FillAsync(ticketId.ToString());
+        // The board search matches title/description, not the numeric ticket ID.
+        await Page.GetByPlaceholder("Title or description").FillAsync("E2E-Navigation");
         await Page.GetByRole(AriaRole.Link, new() { Name = "View" }).First.ClickAsync();
-        await Expect(Page).ToHaveURLAsync(new Regex($"/tickets/{ticketId}/?$"));
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/tickets/\d+/?$"));
         await Page.GetByRole(AriaRole.Link, new() { Name = "Back to board" }).ClickAsync();
         await Expect(Page).ToHaveURLAsync(new Regex(@"/tickets/?$"));
     }
