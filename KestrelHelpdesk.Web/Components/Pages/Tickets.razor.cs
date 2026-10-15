@@ -191,15 +191,19 @@ public partial class Tickets : IAsyncDisposable
             return;
         }
 
-        var rows = tickets.Select(ticket => new TicketPdfRow(
-            ticket.Id,
-            ticket.Title,
-            GetStatusLabel(ticket.Status),
-            ticket.Priority.ToString(),
-            GetAssigneeName(ticket.AssignedToUserId),
-            BrowserTimeZone.IsInitialized
-                ? BrowserTimeZone.Format(ticket.CreatedAt)
-                : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")).ToList();
+        var rows = new List<TicketPdfRow>(tickets.Count);
+        foreach (var ticket in tickets)
+        {
+            rows.Add(new TicketPdfRow(
+                ticket.Id,
+                ticket.Title,
+                GetStatusLabel(ticket.Status),
+                ticket.Priority.ToString(),
+                GetAssigneeName(ticket.AssignedToUserId),
+                BrowserTimeZone.IsInitialized
+                    ? BrowserTimeZone.Format(ticket.CreatedAt)
+                    : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
+        }
 
         var pdfBytes = TicketPdfService.Generate(rows, $"Ticket Board - {scopeLabel}");
         var moduleUrl = new Uri(new Uri(NavigationManager.BaseUri), "js/pdf-export.js").ToString();
