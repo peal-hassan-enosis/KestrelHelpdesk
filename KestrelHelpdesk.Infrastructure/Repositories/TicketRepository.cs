@@ -143,6 +143,26 @@ public class TicketRepository : ITicketRepository
                 cancellationToken);
     }
 
+    public async Task UnassignTicketsNotAssignedToAgentsAsync(
+        IEnumerable<string> agentUserIds,
+        CancellationToken cancellationToken = default)
+    {
+        var activeAgentIds = agentUserIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        using var context = await _factory.CreateDbContextAsync(cancellationToken);
+        var query = context.Tickets.Where(ticket => ticket.AssignedToUserId != null);
+
+        if (activeAgentIds.Length > 0)
+            query = query.Where(ticket => !activeAgentIds.Contains(ticket.AssignedToUserId!));
+
+        await query.ExecuteUpdateAsync(
+            updates => updates.SetProperty(ticket => ticket.AssignedToUserId, (string?)null),
+            cancellationToken);
+    }
+
     public async Task AddCommentAsync(Comment comment)
     {
         using var context = await _factory.CreateDbContextAsync();
