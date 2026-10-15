@@ -1,4 +1,5 @@
 using KestrelHelpdesk.Core.Authorization;
+using KestrelHelpdesk.Core.Constants;
 using KestrelHelpdesk.Core.Events;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Core.Models;
@@ -211,7 +212,7 @@ public partial class Tickets : IAsyncDisposable
 
         try
         {
-            await Task.Delay(300, token);
+            await Task.Delay(AppLimits.TicketSearchDebounceMilliseconds, token);
             searchTerm = searchText.Trim();
             await RefreshGrid();
         }
@@ -235,7 +236,7 @@ public partial class Tickets : IAsyncDisposable
     private string GetAssigneeName(string? userId) =>
         string.IsNullOrWhiteSpace(userId)
             ? "-"
-            : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "Unknown agent";
+            : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? AppLimits.UnknownAgent;
 
     private static Color GetStatusColor(TicketStatus status) => status switch
     {
