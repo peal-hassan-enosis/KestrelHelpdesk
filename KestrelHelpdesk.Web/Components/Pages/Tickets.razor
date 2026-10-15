@@ -69,8 +69,8 @@
     <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
   </MudItem>
   <MudItem xs="12" md="4">
-    <MudSelect T="string" Value="@StatusQuery" ValueChanged="OnStatusChanged" Label="Status" Variant="Variant.Outlined">
-      <MudSelectItem T="string" Value="@string.Empty">All Statuses</MudSelectItem>
+    <MudSelect T="string" Value="@(StatusQuery ?? "All")" ValueChanged="OnStatusChanged" Label="Status" Variant="Variant.Outlined">
+      <MudSelectItem T="string" Value="All">All Statuses</MudSelectItem>
       <MudSelectItem T="string" Value="@TicketStatus.Open.ToString()">Open</MudSelectItem>
       <MudSelectItem T="string" Value="@TicketStatus.InProgress.ToString()">In Progress</MudSelectItem>
       <MudSelectItem T="string" Value="@TicketStatus.Resolved.ToString()">Resolved</MudSelectItem>
@@ -106,7 +106,7 @@
               <option value="">Unassigned</option>
               @foreach (var agent in agents)
               {
-                <option value="@agent.Id" disabled="@(!IsActiveAgent(agent.Id))">@(IsActiveAgent(agent.Id) ? agent.DisplayName : $"{agent.DisplayName} (Former agent)")</option>
+                <option value="@agent.Id">@agent.DisplayName</option>
               }
             </select>
           </AuthorizeView>
