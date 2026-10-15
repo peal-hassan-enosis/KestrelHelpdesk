@@ -21,8 +21,10 @@ public sealed class RoleAndDashboardTests : E2ETestBase
 
         await using var agentContext = await Browser.NewContextAsync(ContextOptions());
         var agentPage = await agentContext.NewPageAsync();
-        await LoginAsync(agentPage, AgentEmail, AgentPassword, $"/tickets/{ticketId}");
-        await Expect(agentPage).Not.ToHaveURLAsync(new Regex($"/tickets/{ticketId}/?$"));
+        await LoginAsync(agentPage, AgentEmail, AgentPassword, "/tickets");
+        await agentPage.GotoAsync($"/tickets/{ticketId}");
+        await Expect(agentPage.GetByRole(AriaRole.Heading, new() { Name = "Ticket Not Found" })).ToBeVisibleAsync();
+        await Expect(agentPage.GetByText("does not exist or you don't have access to it.")).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -86,8 +88,11 @@ public sealed class RoleAndDashboardTests : E2ETestBase
     [Fact]
     public async Task Employee_CannotOpenManagerRoleAssignment()
     {
-        await LoginAsync(EmployeeEmail, EmployeePassword, "/role-assignment");
-        await Expect(Page).Not.ToHaveURLAsync(new Regex(@"/role-assignment/?$"));
+        await LoginAsync(EmployeeEmail, EmployeePassword);
+        await Page.GotoAsync("/role-assignment");
+
+        await Expect(Page).ToHaveURLAsync(new Regex(@"/Account/AccessDenied\?ReturnUrl=.*role-assignment"));
+        await Expect(Page.GetByText("Access denied", new() { Exact = false }).First).ToBeVisibleAsync();
     }
 
     private async Task LoginAsync(IPage page, string email, string password, string returnPath)
