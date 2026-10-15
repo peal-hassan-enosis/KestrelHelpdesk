@@ -1,4 +1,5 @@
 @page "/tickets/{id:int}/edit"
+@using System.ComponentModel.DataAnnotations
 @using KestrelHelpdesk.Core.Authorization
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
@@ -8,6 +9,7 @@
 @inject ITicketAttachmentService TicketAttachmentService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<EditTicket> Logger
 
 @attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
 @rendermode InteractiveServer
@@ -42,6 +44,11 @@ else
     <div class="page-actions"><a href="/tickets/@ticketToEdit.Id" class="btn btn-outline-secondary">Cancel</a></div>
   </header>
 
+  @if (!string.IsNullOrWhiteSpace(updateErrorMessage))
+  {
+    <div class="alert alert-danger mb-4">@updateErrorMessage</div>
+  }
+
   <div class="surface-card form-surface">
     <TicketForm TicketModel="ticketToEdit"
                 CanEditStatus="canEditStatus"
@@ -57,6 +64,7 @@ else
   private Ticket? ticketToEdit;
   private bool notFound;
   private bool canEditStatus = true;
+  private string? updateErrorMessage;
 
   protected override async Task OnInitializedAsync()
   {
@@ -92,12 +100,36 @@ else
 
   private async Task UpdateTicket(TicketFormSubmission submission)
   {
-    await TicketService.UpdateTicketAsync(submission.Ticket);
-    await TicketAttachmentService.ApplyChangesAsync(
-        submission.Ticket.Id,
-        submission.NewFiles,
-        submission.AttachmentIdsToDelete);
+    updateErrorMessage = null;
 
-    Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+    try
+    {
+      await TicketService.UpdateTicketAsync(submission.Ticket);
+      await TicketAttachmentService.ApplyChangesAsync(
+          submission.Ticket.Id,
+          submission.NewFiles,
+          submission.AttachmentIdsToDelete);
+
+      Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+    }
+    catch (ValidationException ex)
+    {
+      updateErrorMessage = ex.Message;
+    }
+    catch (UnauthorizedAccessException)
+    {
+      updateErrorMessage = "You are not authorized to update this ticket.";
+    }
+    catch (KeyNotFoundException)
+    {
+      updateErrorMessage = "The ticket could not be found. It may have been removed or is no longer available.";
+      ticketToEdit = null;
+      notFound = true;
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Failed to update ticket {TicketId}.", submission.Ticket.Id);
+      updateErrorMessage = "The ticket could not be updated. Please try again.";
+    }
   }
 }
