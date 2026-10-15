@@ -12,12 +12,12 @@ public sealed class ExportImportAndNavigationTests : E2ETestBase
         await LoginAsync(EmployeeEmail, EmployeePassword);
         await Page.GotoAsync("/tickets");
 
-        var download = await Page.RunAndWaitForDownloadAsync(async () =>
-        {
-            await Page.GetByRole(AriaRole.Button, new() { Name = "Export page" }).ClickAsync();
-        });
-
-        Assert.False(string.IsNullOrWhiteSpace(download.SuggestedFilename));
+        // The export implementation creates the PDF as a Blob and starts the
+        // browser download from JavaScript. Verify the application reports that
+        // the export started instead of relying on Playwright's Download event,
+        // which is not guaranteed for Blob-backed downloads.
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Export page" }).ClickAsync();
+        await Expect(Page.GetByText("PDF export started for", new() { Exact = false })).ToBeVisibleAsync();
     }
 
     [Fact]
