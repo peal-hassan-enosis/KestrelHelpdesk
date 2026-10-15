@@ -106,7 +106,7 @@
               <option value="">Unassigned</option>
               @foreach (var agent in agents)
               {
-                <option value="@agent.Id">@agent.DisplayName</option>
+                <option value="@agent.Id" disabled="@(!IsActiveAgent(agent.Id)">@(IsActiveAgent(agent.Id) ? agent.DisplayName : $"{agent.DisplayName} (Former agent)")</option>
               }
             </select>
           </AuthorizeView>
