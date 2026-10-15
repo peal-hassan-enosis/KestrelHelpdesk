@@ -42,6 +42,7 @@ public partial class Tickets : IAsyncDisposable
     private bool exportingAllTickets;
     private string? exportErrorMessage;
     private string? exportSuccessMessage;
+    private string? assignmentErrorMessage;
     private string? currentUserId;
     private string searchText = string.Empty;
     private string searchTerm = string.Empty;
@@ -171,7 +172,7 @@ public partial class Tickets : IAsyncDisposable
             GetAssigneeName(ticket.AssignedToUserId),
             BrowserTimeZone.IsInitialized
                 ? BrowserTimeZone.Format(ticket.CreatedAt)
-                : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))).ToList();
+                : ticket.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")).ToList();
 
         var pdfBytes = TicketPdfService.Generate(rows, $"Ticket Board - {scopeLabel}");
         var moduleUrl = new Uri(new Uri(NavigationManager.BaseUri), "js/pdf-export.js").ToString();
@@ -223,14 +224,52 @@ public partial class Tickets : IAsyncDisposable
 
     private async Task ManagerAssignmentChanged(int ticketId, ChangeEventArgs e)
     {
-        await TicketAssignmentService.AssignTicketAsync(ticketId, e.Value?.ToString());
-        await RefreshGrid();
+        assignmentErrorMessage = null;
+
+        try
+        {
+            await TicketAssignmentService.AssignTicketAsync(ticketId, e.Value?.ToString());
+            await RefreshGrid();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            assignmentErrorMessage = "You are not authorized to change this ticket assignment.";
+        }
+        catch (KeyNotFoundException)
+        {
+            assignmentErrorMessage = "The ticket could not be found. It may have been removed or is no longer available.";
+            await RefreshGrid();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to change assignment for ticket {TicketId}.", ticketId);
+            assignmentErrorMessage = "The ticket assignment could not be changed. Please try again.";
+        }
     }
 
     private async Task AssignToMe(int ticketId, string? agentUserId)
     {
-        await TicketAssignmentService.AssignTicketAsync(ticketId, agentUserId);
-        await RefreshGrid();
+        assignmentErrorMessage = null;
+
+        try
+        {
+            await TicketAssignmentService.AssignTicketAsync(ticketId, agentUserId);
+            await RefreshGrid();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            assignmentErrorMessage = "You are not authorized to change this ticket assignment.";
+        }
+        catch (KeyNotFoundException)
+        {
+            assignmentErrorMessage = "The ticket could not be found. It may have been removed or is no longer available.";
+            await RefreshGrid();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to assign ticket {TicketId} for the current agent.", ticketId);
+            assignmentErrorMessage = "The ticket assignment could not be changed. Please try again.";
+        }
     }
 
     private string GetAssigneeName(string? userId) =>
