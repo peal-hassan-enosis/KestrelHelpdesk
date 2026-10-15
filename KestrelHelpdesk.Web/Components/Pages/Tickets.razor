@@ -69,13 +69,15 @@
       <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
     </MudItem>
     <MudItem xs="12" md="6">
-      <label for="status-filter" class="form-label">Status</label>
-      <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
-        <option value="">All Statuses</option>
-        <option value="@TicketStatus.Open.ToString()">Open</option>
-        <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
-        <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
-      </select>
+      <div class="form-floating">
+        <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
+          <option value="">All Statuses</option>
+          <option value="@TicketStatus.Open.ToString()">Open</option>
+          <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
+          <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
+        </select>
+        <label for="status-filter">Status</label>
+      </div>
     </MudItem>
   </MudGrid>
 
