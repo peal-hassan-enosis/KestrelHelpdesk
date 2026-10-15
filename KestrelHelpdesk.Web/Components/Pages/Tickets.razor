@@ -1,5 +1,6 @@
 @page "/tickets"
 @using KestrelHelpdesk.Core.Authorization
+@using KestrelHelpdesk.Core.Constants
 @using KestrelHelpdesk.Core.Models
 @using Microsoft.AspNetCore.Authorization
 
@@ -16,7 +17,7 @@
       <p class="page-subtitle">Find a request, check its status and keep ownership clear.</p>
     </div>
     <div class="page-actions">
-      <AuthorizeView Roles="Employee, Agent, Manager">
+      <AuthorizeView Roles="@AppRoles.All">
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="@exporting" OnClick="ExportCurrentPageAsync">
           <MudIcon Icon="@Icons.Material.Filled.FileDownload" Class="me-1" />
           @(exportingCurrentPage ? "Exporting..." : "Export page")
@@ -59,7 +60,7 @@
 <MudGrid Class="mb-4">
   <MudItem xs="12" md="6">
     <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
-    <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts 300 ms after you stop typing.</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
   </MudItem>
   <MudItem xs="12" md="4">
     <MudSelect T="string" Value="@StatusQuery" ValueChanged="OnStatusChanged" Label="Status" Variant="Variant.Outlined">
@@ -72,7 +73,7 @@
 </MudGrid>
 
 <MudPaper Elevation="1" Class="pa-2 ticket-grid-surface">
-  <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="15" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
+  <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="@AppLimits.DefaultPageSize" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
     <Columns>
       <PropertyColumn Property="@(t => t.Id)" Title="ID" Sortable="true" />
       <PropertyColumn Property="@(t => t.Title)" Title="Title" Sortable="true" />
@@ -140,7 +141,7 @@
       </div>
     </LoadingContent>
     <PagerContent>
-      <MudDataGridPager T="Ticket" PageSizeOptions="@(new[] { 15, 30, 50 })" />
+      <MudDataGridPager T="Ticket" PageSizeOptions="@(new[] { AppLimits.DefaultPageSize, AppLimits.MediumPageSize, AppLimits.LargePageSize })" />
     </PagerContent>
   </MudDataGrid>
 </MudPaper>
