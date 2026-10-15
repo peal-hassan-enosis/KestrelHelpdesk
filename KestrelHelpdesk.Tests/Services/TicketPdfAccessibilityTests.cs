@@ -30,9 +30,9 @@ public sealed class TicketPdfAccessibilityTests
         Assert.NotNull(catalog.GetAsDictionary(PdfName.StructTreeRoot));
         Assert.Equal("en-US", catalog.GetAsString(PdfName.Lang)?.GetValue());
         Assert.Equal(title, pdf.GetDocumentInfo().GetTitle());
-        Assert.True(pdf.GetCatalog().GetPdfObject()
+        Assert.True(catalog
             .GetAsDictionary(PdfName.ViewerPreferences)?
-            .GetAsBool(PdfName.DisplayDocTitle)?.GetValue() == true);
+            .GetAsBool(PdfName.DisplayDocTitle) == true);
         Assert.Equal(1, pdf.GetNumberOfPages());
     }
 }
