@@ -22,7 +22,7 @@ public sealed class AuthenticationAndHealthTests : E2ETestBase
         await LoginAsync(EmployeeEmail, EmployeePassword);
 
         await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Ticket board" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Create ticket" })).ToBeVisibleAsync();
+        await Expect(Page.GetByRole(AriaRole.Link, new() { Name = "Create ticket" })).ToBeVisibleAsync();
     }
 
     [Fact]
