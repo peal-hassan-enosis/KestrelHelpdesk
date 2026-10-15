@@ -31,7 +31,7 @@ public abstract class E2ETestBase : PageTest
         ViewportSize = new() { Width = 1440, Height = 1000 }
     };
 
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         Page.SetDefaultTimeout(10_000);
