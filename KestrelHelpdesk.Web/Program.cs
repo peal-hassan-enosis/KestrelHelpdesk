@@ -151,7 +151,7 @@ app.MapGet("/tickets/export/pdf", async (
     var rows = tickets.Select(ticket => new TicketPdfRow(
         ticket.Id,
         ticket.Title,
-        ticket.Status == TicketStatus.InProgress ? "In Progress" : ticket.Status.ToString(),
+        ticket.Status == KestrelHelpdesk.Core.Models.TicketStatus.InProgress ? "In Progress" : ticket.Status.ToString(),
         ticket.Priority.ToString(),
         string.IsNullOrWhiteSpace(ticket.AssignedToUserId)
             ? "-"
