@@ -19,6 +19,7 @@ public interface ITicketRepository
     Task UpdateTicketAsync(Ticket ticket);
     Task AssignTicketAsync(int ticketId, string? agentUserId);
     Task UnassignTicketsByUserAsync(string userId, CancellationToken cancellationToken = default);
+    Task UnassignTicketsNotAssignedToAgentsAsync(IEnumerable<string> agentUserIds, CancellationToken cancellationToken = default);
     Task AddCommentAsync(Comment comment);
     Task<Dictionary<TicketStatus, int>> GetTicketStatusCountsAsync(TicketScope scope, string userId);
 }
