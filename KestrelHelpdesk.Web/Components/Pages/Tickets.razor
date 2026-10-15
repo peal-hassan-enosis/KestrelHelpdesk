@@ -61,44 +61,23 @@
   @if (isManager)
   {
     <MudCheckBox T="bool" @bind-Value="notAssignedOnly" @bind-Value:after="RefreshGrid" Label="Not Assigned (Open only)" Class="mb-3" />
-
-    <MudGrid Class="mb-2">
-      <MudItem xs="12">
-        <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
-        <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
-      </MudItem>
-    </MudGrid>
-
-    <MudGrid Class="mb-4">
-      <MudItem xs="12" sm="6" md="4">
-        <label for="status-filter" class="form-label">Status</label>
-        <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
-          <option value="">All Statuses</option>
-          <option value="@TicketStatus.Open.ToString()">Open</option>
-          <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
-          <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
-        </select>
-      </MudItem>
-    </MudGrid>
   }
-  else
-  {
-    <MudGrid Class="mb-4">
-      <MudItem xs="12" md="6">
-        <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
-        <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
-      </MudItem>
-      <MudItem xs="12" md="4">
-        <label for="status-filter" class="form-label">Status</label>
-        <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
-          <option value="">All Statuses</option>
-          <option value="@TicketStatus.Open.ToString()">Open</option>
-          <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
-          <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
-        </select>
-      </MudItem>
-    </MudGrid>
-  }
+
+  <MudGrid Class="mb-4">
+    <MudItem xs="12" md="6">
+      <MudTextField T="string" Value="@searchText" ValueChanged="OnSearchInput" Label="Search tickets" Placeholder="Title or description" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Immediate="true" Variant="Variant.Outlined" />
+      <MudText Typo="Typo.caption" Color="Color.Secondary">Search starts @AppLimits.TicketSearchDebounceMilliseconds ms after you stop typing.</MudText>
+    </MudItem>
+    <MudItem xs="12" md="6">
+      <label for="status-filter" class="form-label">Status</label>
+      <select id="status-filter" class="form-select" value="@(StatusQuery ?? string.Empty)" @onchange="e => OnStatusChanged(e.Value?.ToString())" aria-label="Status">
+        <option value="">All Statuses</option>
+        <option value="@TicketStatus.Open.ToString()">Open</option>
+        <option value="@TicketStatus.InProgress.ToString()">In Progress</option>
+        <option value="@TicketStatus.Resolved.ToString()">Resolved</option>
+      </select>
+    </MudItem>
+  </MudGrid>
 
   <MudPaper Elevation="1" Class="pa-2 ticket-grid-surface">
     <MudDataGrid T="Ticket" @ref="grid" ServerData="LoadGridData" RowsPerPage="@AppLimits.DefaultPageSize" SortMode="SortMode.Single" Hover="true" Striped="true" Dense="true" Bordered="true" LoadingProgressColor="Color.Primary">
