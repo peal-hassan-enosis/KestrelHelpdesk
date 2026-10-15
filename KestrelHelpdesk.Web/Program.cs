@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
+using KestrelHelpdesk.Core.Models;
 using KestrelHelpdesk.Infrastructure.Data;
 using KestrelHelpdesk.Infrastructure.FileStorage;
 using KestrelHelpdesk.Infrastructure.Identity;
@@ -95,7 +96,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
