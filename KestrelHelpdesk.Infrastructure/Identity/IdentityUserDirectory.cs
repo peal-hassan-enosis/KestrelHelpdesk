@@ -1,5 +1,6 @@
 ﻿using KestrelHelpdesk.Core.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace KestrelHelpdesk.Infrastructure.Identity;
 
