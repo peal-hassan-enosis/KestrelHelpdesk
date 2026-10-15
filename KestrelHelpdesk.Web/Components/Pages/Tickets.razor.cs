@@ -32,6 +32,7 @@ public partial class Tickets : IAsyncDisposable
 
     private MudDataGrid<Ticket>? grid;
     private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
+    private readonly HashSet<string> activeAgentIds = new(StringComparer.Ordinal);
     private IReadOnlyList<Ticket> currentPageTickets = Array.Empty<Ticket>();
     private TicketScope activeScope = TicketScope.EmployeeOwn;
     private bool isAgent;
@@ -61,6 +62,7 @@ public partial class Tickets : IAsyncDisposable
         currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         activeScope = isManager ? TicketScope.ManagerAll : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
         agents = await UserDirectory.GetAgentsAsync();
+        activeAgentIds.UnionWith(agents.Select(agent => agent.Id));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -93,7 +95,6 @@ public partial class Tickets : IAsyncDisposable
 
     private async Task IncludeFormerAssigneesAsync(IReadOnlyList<Ticket> tickets)
     {
-        var activeAgentIds = agents.Select(agent => agent.Id).ToHashSet(StringComparer.Ordinal);
         var formerAssigneeIds = tickets
             .Select(ticket => ticket.AssignedToUserId)
             .Where(userId => !string.IsNullOrWhiteSpace(userId) && !activeAgentIds.Contains(userId))
@@ -303,13 +304,7 @@ public partial class Tickets : IAsyncDisposable
             ? "-"
             : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? AppLimits.UnknownAgent;
 
-    private bool IsActiveAgent(string userId) =>
-        agents.Any(agent => agent.Id == userId) &&
-        activeAgentIds.Contains(userId);
-
-    private HashSet<string> activeAgentIds => agents
-        .Select(agent => agent.Id)
-        .ToHashSet(StringComparer.Ordinal);
+    private bool IsActiveAgent(string userId) => activeAgentIds.Contains(userId);
 
     private static Color GetStatusColor(TicketStatus status) => status switch
     {
