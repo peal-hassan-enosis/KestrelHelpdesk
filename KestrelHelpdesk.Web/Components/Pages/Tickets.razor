@@ -31,6 +31,12 @@
     </div>
   </header>
 
+  @if (!string.IsNullOrWhiteSpace(assignmentErrorMessage))
+  {
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4" ShowCloseIcon="true" CloseIcon="@Icons.Material.Filled.Close" OnClose="@(() => assignmentErrorMessage = null)">
+      @assignmentErrorMessage
+    </MudAlert>
+  }
   @if (!string.IsNullOrWhiteSpace(exportErrorMessage))
   {
     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4" ShowCloseIcon="true" CloseIcon="@Icons.Material.Filled.Close" OnClose="@(() => exportErrorMessage = null)">
