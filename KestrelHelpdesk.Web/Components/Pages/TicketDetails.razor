@@ -1,5 +1,6 @@
 @page "/tickets/{Id:int}"
 @using KestrelHelpdesk.Core.Authorization
+@using KestrelHelpdesk.Core.Constants
 @using KestrelHelpdesk.Core.Events
 @using KestrelHelpdesk.Core.Interfaces
 @using KestrelHelpdesk.Core.Models
@@ -13,7 +14,7 @@
 @inject NavigationManager NavigationManager
 @inject BrowserTimeZoneService BrowserTimeZone
 
-@attribute [Authorize(Roles = AppRoles.Employee + "," + AppRoles.Agent + "," + AppRoles.Manager)]
+@attribute [Authorize(Roles = AppRoles.All)]
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -168,7 +169,7 @@
   }
 
   private string GetAssigneeName(string? userId) =>
-    string.IsNullOrWhiteSpace(userId) ? "-" : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "Unknown agent";
+    string.IsNullOrWhiteSpace(userId) ? "-" : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? AppLimits.UnknownAgent;
 
   private async Task PostComment()
   {
