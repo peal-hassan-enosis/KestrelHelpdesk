@@ -28,3 +28,20 @@ export function downloadPdf(fileName, base64Data) {
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 }
+
+export function downloadPdfFromUrl(url) {
+    if (!url) {
+        throw new Error("A PDF download URL is required.");
+    }
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.style.display = "none";
+    document.body.appendChild(link);
+
+    try {
+        link.click();
+    } finally {
+        link.remove();
+    }
+}
