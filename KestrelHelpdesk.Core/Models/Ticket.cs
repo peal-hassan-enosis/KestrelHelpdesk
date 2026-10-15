@@ -21,7 +21,7 @@ public class Ticket
     public TicketPriority Priority { get; set; }
 
     [Required(ErrorMessage = "Category is required.")]
-    public TicketCategory? Category { get; set; }
+    public TicketCategory Category { get; set; }
 
     public TicketStatus Status { get; set; }
 
