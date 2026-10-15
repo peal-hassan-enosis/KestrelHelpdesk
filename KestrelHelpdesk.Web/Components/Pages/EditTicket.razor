@@ -105,6 +105,16 @@ else
 
     try
     {
+      // A normal ticket edit does not touch attachments. Avoid opening an ambient
+      // transaction across multiple DbContext instances in that case; the ticket
+      // update itself is already atomic in TicketRepository.
+      if (submission.NewFiles.Count == 0 && submission.AttachmentIdsToDelete.Count == 0)
+      {
+        await TicketService.UpdateTicketAsync(submission.Ticket);
+        Nav.NavigateTo($"/tickets/{submission.Ticket.Id}");
+        return;
+      }
+
       using var transaction = new TransactionScope(
           TransactionScopeOption.Required,
           new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
