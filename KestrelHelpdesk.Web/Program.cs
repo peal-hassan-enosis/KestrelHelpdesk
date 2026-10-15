@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Claims;
 using KestrelHelpdesk.Core.Authorization;
 using KestrelHelpdesk.Core.Interfaces;
 using KestrelHelpdesk.Infrastructure.Data;
@@ -93,13 +95,78 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapHealthChecks("/health");
+
+app.MapGet("/tickets/export/pdf", async (
+    HttpContext httpContext,
+    string? status,
+    string? search,
+    TicketScope? scope,
+    bool notAssignedOnly,
+    string? sortBy,
+    bool sortDescending,
+    string? timeZoneId,
+    ITicketRepository ticketRepository,
+    IUserDirectory userDirectory,
+    ITicketPdfService ticketPdfService,
+    CancellationToken cancellationToken) =>
+{
+    var user = httpContext.User;
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrWhiteSpace(userId))
+        return Results.Unauthorized();
+
+    var requestedScope = scope ?? TicketScope.EmployeeOwn;
+    var effectiveScope = user.IsInRole(AppRoles.Manager)
+        ? TicketScope.ManagerAll
+        : user.IsInRole(AppRoles.Employee)
+            ? TicketScope.EmployeeOwn
+            : requestedScope == TicketScope.AgentCreated
+                ? TicketScope.AgentCreated
+                : TicketScope.AgentAssigned;
+
+    var tickets = await ticketRepository.GetTicketsForExportAsync(
+        status,
+        search,
+        sortBy,
+        !sortDescending,
+        effectiveScope,
+        userId,
+        user.IsInRole(AppRoles.Manager) && notAssignedOnly);
+
+    var agents = await userDirectory.GetAgentsAsync();
+    var agentNames = agents.ToDictionary(agent => agent.Id, agent => agent.DisplayName, StringComparer.Ordinal);
+    var timeZone = TimeZoneInfo.Utc;
+
+    if (!string.IsNullOrWhiteSpace(timeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var requestedTimeZone))
+        timeZone = requestedTimeZone;
+
+    var rows = tickets.Select(ticket => new TicketPdfRow(
+        ticket.Id,
+        ticket.Title,
+        ticket.Status == TicketStatus.InProgress ? "In Progress" : ticket.Status.ToString(),
+        ticket.Priority.ToString(),
+        string.IsNullOrWhiteSpace(ticket.AssignedToUserId)
+            ? "-"
+            : agentNames.GetValueOrDefault(ticket.AssignedToUserId) ?? "-",
+        TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.SpecifyKind(ticket.CreatedAt, DateTimeKind.Utc),
+                timeZone)
+            .ToString("g", CultureInfo.CurrentCulture)))
+        .ToList();
+
+    var pdfBytes = ticketPdfService.Generate(rows, "Ticket Board - All Tickets", cancellationToken);
+    var fileName = $"tickets-all-{DateTime.Now:yyyyMMdd-HHmmss}.pdf";
+
+    return Results.File(pdfBytes, "application/pdf", fileName);
+}).RequireAuthorization();
+
 app.MapGet("/tickets/{ticketId:int}/attachments/{attachmentId:int}", async (
     int ticketId,
     int attachmentId,
