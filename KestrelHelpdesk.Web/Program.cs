@@ -79,6 +79,12 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await IdentitySeeder.SeedAsync(scope.ServiceProvider);
+
+    var userDirectory = scope.ServiceProvider.GetRequiredService<IUserDirectory>();
+    var ticketRepository = scope.ServiceProvider.GetRequiredService<ITicketRepository>();
+    var agents = await userDirectory.GetAgentsAsync();
+    await ticketRepository.UnassignTicketsNotAssignedToAgentsAsync(
+        agents.Select(agent => agent.Id));
 }
 
 if (!app.Environment.IsDevelopment())
@@ -87,7 +93,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForErrors: true);
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
