@@ -32,7 +32,6 @@ public partial class Tickets : IAsyncDisposable
 
     private MudDataGrid<Ticket>? grid;
     private IReadOnlyList<AssignableUser> agents = Array.Empty<AssignableUser>();
-    private readonly HashSet<string> activeAgentIds = new(StringComparer.Ordinal);
     private IReadOnlyList<Ticket> currentPageTickets = Array.Empty<Ticket>();
     private TicketScope activeScope = TicketScope.EmployeeOwn;
     private bool isAgent;
@@ -62,7 +61,6 @@ public partial class Tickets : IAsyncDisposable
         currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         activeScope = isManager ? TicketScope.ManagerAll : isAgent ? TicketScope.AgentAssigned : TicketScope.EmployeeOwn;
         agents = await UserDirectory.GetAgentsAsync();
-        activeAgentIds.UnionWith(agents.Select(agent => agent.Id));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -89,32 +87,7 @@ public partial class Tickets : IAsyncDisposable
             currentSortDescending);
 
         currentPageTickets = items;
-        await IncludeFormerAssigneesAsync(items);
         return new GridData<Ticket> { Items = items, TotalItems = totalCount };
-    }
-
-    private async Task IncludeFormerAssigneesAsync(IReadOnlyList<Ticket> tickets)
-    {
-        var formerAssigneeIds = tickets
-            .Select(ticket => ticket.AssignedToUserId)
-            .Where(userId => !string.IsNullOrWhiteSpace(userId) && !activeAgentIds.Contains(userId))
-            .Select(userId => userId!)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (formerAssigneeIds.Count == 0)
-            return;
-
-        var formerAssignees = await UserDirectory.GetUsersByIdsAsync(formerAssigneeIds);
-        if (formerAssignees.Count == 0)
-            return;
-
-        agents = agents
-            .Concat(formerAssignees)
-            .GroupBy(agent => agent.Id, StringComparer.Ordinal)
-            .Select(group => group.First())
-            .OrderBy(agent => agent.DisplayName)
-            .ToList();
     }
 
     private async Task ExportCurrentPageAsync()
@@ -230,7 +203,7 @@ public partial class Tickets : IAsyncDisposable
 
     private async Task OnStatusChanged(string? value)
     {
-        StatusQuery = value;
+        StatusQuery = value == "All" ? null : value;
         await RefreshGrid();
     }
 
@@ -306,9 +279,7 @@ public partial class Tickets : IAsyncDisposable
     private string GetAssigneeName(string? userId) =>
         string.IsNullOrWhiteSpace(userId)
             ? "-"
-            : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? AppLimits.UnknownAgent;
-
-    private bool IsActiveAgent(string userId) => activeAgentIds.Contains(userId);
+            : agents.FirstOrDefault(a => a.Id == userId)?.DisplayName ?? "-";
 
     private static Color GetStatusColor(TicketStatus status) => status switch
     {
