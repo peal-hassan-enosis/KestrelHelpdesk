@@ -130,6 +130,19 @@ public class TicketRepository : ITicketRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task UnassignTicketsByUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return;
+
+        using var context = await _factory.CreateDbContextAsync(cancellationToken);
+        await context.Tickets
+            .Where(ticket => ticket.AssignedToUserId == userId)
+            .ExecuteUpdateAsync(
+                updates => updates.SetProperty(ticket => ticket.AssignedToUserId, (string?)null),
+                cancellationToken);
+    }
+
     public async Task AddCommentAsync(Comment comment)
     {
         using var context = await _factory.CreateDbContextAsync();
